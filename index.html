@@ -281,6 +281,20 @@
         const SCRUB_THRESHOLD = 5000;
         let stains = [];
 
+        // 導航停留偵測 (Dwell Navigation)
+        let hoverTarget = null;
+        let hoverStartTime = 0;
+        const HOVER_DWELL_TIME = 1500; // 停留 1.5 秒觸發
+        const NAV_ZONES = {
+            COUNTER:     { x: 0,   y: 190, w: 100, h: 160 },
+            KITCHEN:     { x: 420, y: 0,   w: 120, h: 130 },
+            DINING_ROOM: { x: 860, y: 190, w: 100, h: 160 }
+        };
+        let dwellProgress = 0;
+        let dwellCooldown = 0;
+        const DWELL_COOLDOWN_TIME = 1000;
+        let activeHandPositions = [];
+
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
@@ -538,6 +552,49 @@
             }
         };
 
+        // --- Phase 2: 手部滯留導航 (Dwell Navigation) ---
+        function checkDwellNavigation() {
+            if (macroState !== 'GAMEPLAY') return;
+            if (Date.now() < dwellCooldown) {
+                hoverTarget = null;
+                dwellProgress = 0;
+                return;
+            }
+
+            let currentZone = null;
+            for (const [key, zone] of Object.entries(NAV_ZONES)) {
+                if (key === microLocation) continue;
+                for (const pos of activeHandPositions) {
+                    if (pos.x >= zone.x && pos.x <= zone.x + zone.w &&
+                        pos.y >= zone.y && pos.y <= zone.y + zone.h) {
+                        currentZone = key;
+                        break;
+                    }
+                }
+                if (currentZone) break;
+            }
+
+            if (currentZone) {
+                if (hoverTarget === currentZone) {
+                    const elapsed = Date.now() - hoverStartTime;
+                    dwellProgress = Math.min(1, elapsed / HOVER_DWELL_TIME);
+                    if (dwellProgress >= 1) {
+                        setMicroLocation(currentZone);
+                        hoverTarget = null;
+                        dwellProgress = 0;
+                        dwellCooldown = Date.now() + DWELL_COOLDOWN_TIME;
+                    }
+                } else {
+                    hoverTarget = currentZone;
+                    hoverStartTime = Date.now();
+                    dwellProgress = 0;
+                }
+            } else {
+                hoverTarget = null;
+                dwellProgress = 0;
+            }
+        }
+
         const Engine = Matter.Engine,
               World = Matter.World,
               Bodies = Matter.Bodies,
@@ -649,9 +706,11 @@
         }
 
         function handleHandLogic() {
+            activeHandPositions = [];
             if (!handResult || handResult.landmarks.length === 0) {
                 Body.setPosition(rightHandBody, {x: -100, y: -100});
                 lastHandPos = null;
+                checkDwellNavigation();
                 return;
             }
 
@@ -668,6 +727,7 @@
                 const palm = landmarks[9]; 
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
+                activeHandPositions.push({x: px, y: py});
                 
                 if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
                     Body.setPosition(rightHandBody, {x: -100, y: -100}); 
@@ -690,6 +750,7 @@
                 const palm = landmarks[9];
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
+                activeHandPositions.push({x: px, y: py});
 
                 if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
                     Body.setPosition(leftHandBody, {x: -100, y: -100});
@@ -706,6 +767,8 @@
             } else {
                 Body.setPosition(leftHandBody, {x: -100, y: -100});
             }
+
+            checkDwellNavigation();
         }
 
         function checkWiping(px, py) {
@@ -1015,55 +1078,81 @@
             }
         }
 
-        // --- 繪製空間導航箭頭 (供後續手勢觸發用) ---
+        // --- 繪製空間導航箭頭 (Phase 2: 手部滯留觸發) ---
         function drawNavigationArrows() {
-            ctx.save();
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 3;
+            const arrowDefs = [
+                {
+                    key: 'COUNTER', show: microLocation !== 'COUNTER',
+                    cx: 55, cy: GAME_HEIGHT / 2, label: '櫃檯',
+                    labelX: 30, labelY: GAME_HEIGHT / 2 + 70,
+                    draw: () => { ctx.moveTo(30, GAME_HEIGHT/2); ctx.lineTo(80, GAME_HEIGHT/2-40); ctx.lineTo(80, GAME_HEIGHT/2+40); }
+                },
+                {
+                    key: 'KITCHEN', show: microLocation !== 'KITCHEN',
+                    cx: GAME_WIDTH / 2, cy: 55, label: '廚房',
+                    labelX: GAME_WIDTH / 2 - 20, labelY: 110,
+                    draw: () => { ctx.moveTo(GAME_WIDTH/2, 30); ctx.lineTo(GAME_WIDTH/2-40, 80); ctx.lineTo(GAME_WIDTH/2+40, 80); }
+                },
+                {
+                    key: 'DINING_ROOM', show: microLocation !== 'DINING_ROOM',
+                    cx: GAME_WIDTH - 55, cy: GAME_HEIGHT / 2, label: '用餐區',
+                    labelX: GAME_WIDTH - 80, labelY: GAME_HEIGHT / 2 + 70,
+                    draw: () => { ctx.moveTo(GAME_WIDTH-30, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH-80, GAME_HEIGHT/2-40); ctx.lineTo(GAME_WIDTH-80, GAME_HEIGHT/2+40); }
+                }
+            ];
 
-            // 左側按鈕
-            if (microLocation !== 'COUNTER') {
+            for (const arrow of arrowDefs) {
+                if (!arrow.show) continue;
+                ctx.save();
+
+                const isHovering = hoverTarget === arrow.key;
+                const pulse = isHovering ? 0.5 + Math.sin(Date.now() / 200) * 0.2 : 0.2;
+
+                // 箭頭本體
+                ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, pulse + 0.3)})`;
+                ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.moveTo(30, GAME_HEIGHT/2);
-                ctx.lineTo(80, GAME_HEIGHT/2 - 40);
-                ctx.lineTo(80, GAME_HEIGHT/2 + 40);
+                arrow.draw();
+                ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = 'white';
-                ctx.font = '20px Arial';
-                ctx.fillText('櫃檯', 10, GAME_HEIGHT/2 + 70);
-            }
 
-            // 頂部按鈕 (廚房)
-            if (microLocation !== 'KITCHEN') {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.beginPath();
-                ctx.moveTo(GAME_WIDTH/2, 30);
-                ctx.lineTo(GAME_WIDTH/2 - 40, 80);
-                ctx.lineTo(GAME_WIDTH/2 + 40, 80);
-                ctx.fill();
-                ctx.stroke();
-                ctx.fillStyle = 'white';
-                ctx.font = '20px Arial';
-                ctx.fillText('廚房', GAME_WIDTH/2 - 20, 110);
-            }
+                // 標籤
+                ctx.fillStyle = isHovering ? '#f1c40f' : 'white';
+                ctx.font = isHovering ? 'bold 22px Arial' : '20px Arial';
+                ctx.fillText(arrow.label, arrow.labelX, arrow.labelY);
 
-            // 右側按鈕 (用餐區)
-            if (microLocation !== 'DINING_ROOM') {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.beginPath();
-                ctx.moveTo(GAME_WIDTH - 30, GAME_HEIGHT/2);
-                ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT/2 - 40);
-                ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT/2 + 40);
-                ctx.fill();
-                ctx.stroke();
-                ctx.fillStyle = 'white';
-                ctx.font = '20px Arial';
-                ctx.fillText('用餐區', GAME_WIDTH - 80, GAME_HEIGHT/2 + 70);
-            }
+                // 滯留進度環
+                if (isHovering && dwellProgress > 0) {
+                    const r = 48;
+                    // 底環
+                    ctx.beginPath();
+                    ctx.arc(arrow.cx, arrow.cy, r, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+                    ctx.lineWidth = 7;
+                    ctx.stroke();
+                    // 進度弧
+                    ctx.beginPath();
+                    ctx.arc(arrow.cx, arrow.cy, r, -Math.PI / 2, -Math.PI / 2 + dwellProgress * Math.PI * 2);
+                    const ringColor = dwellProgress > 0.7 ? '#2ecc71' : '#f1c40f';
+                    ctx.strokeStyle = ringColor;
+                    ctx.lineWidth = 7;
+                    ctx.lineCap = 'round';
+                    ctx.shadowBlur = 18;
+                    ctx.shadowColor = ringColor;
+                    ctx.stroke();
+                    // 百分比
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${Math.round(dwellProgress * 100)}%`, arrow.cx, arrow.cy + 6);
+                    ctx.textAlign = 'left';
+                }
 
-            ctx.restore();
+                ctx.restore();
+            }
         }
 
         function updateScore(delta) {
