@@ -2,7 +2,7 @@
 
 這是一款使用 HTML5 Canvas 與 MediaPipe Hands/Face 製作的第一人稱視角互動網頁遊戲，名為「42號義麵店」。
 
-## 目前系統狀態 (Phase 4 完成)
+## 目前系統狀態 (Phase 5 完成)
 - **零建置環境 (Zero-build setup)**：純 HTML/CSS/JS 實作，單一檔案 `index.html`。
 - **UI 與存檔系統**：
   - 實作了遊戲巨觀狀態機 (Macro States)：`TITLE` -> `LEVEL_SELECT` -> `GAMEPLAY` -> `LEVEL_RESULT`。
