@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>怪洨餐館 - MVP 核心架構 (第一人稱視角)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #game-container {
+            position: relative;
+            width: 960px;
+            height: 540px;
+            margin-top: 20px;
+            background-color: #2c3e50;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+        video {
+            display: none;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .hud {
+            position: absolute;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #status-hud { top: 15px; left: 15px; }
+        #satisfaction-bar-container {
+            width: 220px;
+            height: 22px;
+            background: #333;
+            border-radius: 11px;
+            overflow: hidden;
+            margin-top: 8px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+        }
+        #satisfaction-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            transition: width 0.1s, background 0.3s;
+        }
+        #controls {
+            margin-top: 20px;
+            z-index: 30;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: transform 0.1s, background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        button:hover { background-color: #c0392b; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+    </style>
+    <!-- Matter.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="loading">載入 MediaPipe 模型與相機中...</div>
+        <video id="webcam" width="960" height="540" autoplay playsinline></video>
+        <canvas id="game-canvas" width="960" height="540"></canvas>
+        <div id="ui-layer">
+            <div id="status-hud" class="hud">
+                <div style="font-size: 1.1em;">目前狀態: <span id="state-display" style="font-weight:bold; color:#f1c40f;">ORDERING (接單)</span></div>
+                <div style="margin-top: 5px;">店面分數: <span id="score-display" style="font-weight:bold; font-size: 1.2em;">100</span></div>
+                <div style="margin-top: 10px; font-size: 0.9em; color:#ccc;">客人滿意度 (需微笑保持):</div>
+                <div id="satisfaction-bar-container">
+                    <div id="satisfaction-bar"></div>
+                </div>
+                <div id="smile-indicator" style="margin-top:8px; font-weight:bold; color:#e74c3c;">未偵測到微笑</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button onclick="setGameState('ORDERING')">👉 ORDERING (接單)</button>
+        <button onclick="setGameState('CLEANING')">🧹 CLEANING (清理)</button>
+        <button onclick="setGameState('WASHING')">🍽️ WASHING (洗碗)</button>
+    </div>
+
+    <script type="module">
+        import {
+            FaceLandmarker,
+            HandLandmarker,
+            FilesetResolver
+        } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
+        const GAME_WIDTH = 960;
+        const GAME_HEIGHT = 540;
+        let gameState = 'ORDERING';
+        let score = 100;
+        let satisfaction = 100;
+        let isSmiling = false;
+
+        let washingPlate = { x: 380, y: 170, w: 200, h: 200, dirtAmount: 100 };
+        let lastHandPos = null;
+        let scrubAccumulator = 0;
+        const SCRUB_THRESHOLD = 5000;
+        let stains = [];
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingEl = document.getElementById('loading');
+        const stateDisplay = document.getElementById('state-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const satBar = document.getElementById('satisfaction-bar');
+        const smileInd = document.getElementById('smile-indicator');
+
+        let faceLandmarker, handLandmarker;
+        let lastVideoTime = -1;
+        let faceResult = null, handResult = null;
+
+        // 手部骨架連接對應表
+        const HAND_CONNECTIONS = [
+            [0, 1], [1, 2], [2, 3], [3, 4],
+            [0, 5], [5, 6], [6, 7], [7, 8],
+            [5, 9], [9, 10], [10, 11], [11, 12],
+            [9, 13], [13, 14], [14, 15], [15, 16],
+            [13, 17], [17, 18], [18, 19], [19, 20],
+            [0, 17]
+        ];
+
+        async function initMediaPipe() {
+            const vision = await FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+            );
+
+            faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                    delegate: "GPU"
+                },
+                outputFaceBlendshapes: true,
+                runningMode: "VIDEO",
+                numFaces: 1
+            });
+
+            handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                    delegate: "GPU"
+                },
+                runningMode: "VIDEO",
+                numHands: 2
+            });
+
+            startCamera();
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: GAME_WIDTH, height: GAME_HEIGHT } });
+                video.srcObject = stream;
+                video.addEventListener("loadeddata", () => {
+                    loadingEl.style.display = 'none';
+                    initMatterJs();
+                    requestAnimationFrame(gameLoop);
+                });
+            } catch (err) {
+                alert("無法存取攝影機，請確認權限或在 Localhost/HTTPS 環境下執行。");
+            }
+        }
+
+        const Engine = Matter.Engine,
+              World = Matter.World,
+              Bodies = Matter.Bodies,
+              Body = Matter.Body,
+              Events = Matter.Events;
+
+        let engine, world;
+        let rightHandBody;
+        let leftHandBody;
+        let trashBodies = [];
+        
+        let cleaningSubState = 'INIT'; // INIT, CLEAR_TRASH, TRANSITION, WIPE_TABLE, DONE
+        let lastOrderType = 'PASTA';
+
+        function initMatterJs() {
+            engine = Engine.create();
+            world = engine.world;
+            engine.world.gravity.y = 0;
+
+            // 將手的半徑加大，且綁定在手心，方便大面積撥動
+            rightHandBody = Bodies.circle(-100, -100, 60, { 
+                isStatic: true,
+                label: 'rightHand'
+            });
+            leftHandBody = Bodies.circle(-100, -100, 60, { 
+                isStatic: true,
+                label: 'leftHand'
+            });
+            World.add(world, [rightHandBody, leftHandBody]);
+            
+            // 移除原本的邊界牆壁與垃圾桶感應區
+            // 我們將透過座標判斷垃圾是否被撥出畫面 (掉到桌子外面)
+        }
+
+        function getTrashInPair(bodyA, bodyB) {
+            if (bodyA.label === 'trash') return { trashBody: bodyA };
+            if (bodyB.label === 'trash') return { trashBody: bodyB };
+            return null;
+        }
+
+        window.setGameState = function(state) {
+            gameState = state;
+            stateDisplay.innerText = state;
+            
+            trashBodies.forEach(b => World.remove(world, b));
+            trashBodies = [];
+            stains = [];
+            scrubAccumulator = 0;
+            washingPlate.dirtAmount = 100;
+
+            if (state === 'CLEANING') {
+                cleaningSubState = 'INIT';
+                setTimeout(() => { cleaningSubState = 'CLEAR_TRASH'; }, 1500); // 提示 1.5 秒後開始
+                lastOrderType = Math.random() > 0.5 ? 'PASTA' : 'DRINK';
+
+                // 生成特定餐具垃圾
+                if (lastOrderType === 'PASTA') {
+                    let plate = Bodies.circle(480, 300, 60, { frictionAir: 0.1, label: 'trash_plate', restitution: 0.2 });
+                    let fork = Bodies.rectangle(600, 300, 20, 100, { frictionAir: 0.1, label: 'trash_utensil', restitution: 0.2 });
+                    trashBodies.push(plate, fork);
+                    World.add(world, [plate, fork]);
+                } else {
+                    let cup = Bodies.rectangle(480, 300, 40, 70, { frictionAir: 0.1, label: 'trash_cup', restitution: 0.2 });
+                    trashBodies.push(cup);
+                    World.add(world, cup);
+                }
+
+                // 生成紙團
+                const paperCount = 2 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < paperCount; i++) {
+                    let trash = Bodies.circle(200 + Math.random()*560, 150 + Math.random()*250, 25, {
+                        frictionAir: 0.15,
+                        label: 'trash_paper',
+                        restitution: 0.3
+                    });
+                    trashBodies.push(trash);
+                    World.add(world, trash);
+                }
+
+                for(let i = 0; i < 5; i++) {
+                    stains.push({
+                        x: 200 + Math.random()*560,
+                        y: 150 + Math.random()*250,
+                        r: 45,
+                        alpha: 1.0
+                    });
+                }
+            }
+        };
+
+        function gameLoop() {
+            if (video.currentTime !== lastVideoTime) {
+                lastVideoTime = video.currentTime;
+                faceResult = faceLandmarker.detectForVideo(video, performance.now());
+                handResult = handLandmarker.detectForVideo(video, performance.now());
+            }
+
+            Engine.update(engine, 1000 / 60);
+
+            // 檢查垃圾是否被撥出畫面 (掉到桌子外面)
+            if (gameState === 'CLEANING') {
+                if (cleaningSubState === 'CLEAR_TRASH') {
+                    trashBodies = trashBodies.filter(body => {
+                        const px = body.position.x;
+                        const py = body.position.y;
+                        // 桌子範圍 100~860, 100~500。加上容錯讓掉落判定更確實
+                        if (px < 50 || px > 910 || py < 50 || py > 550) {
+                            World.remove(world, body);
+                            updateScore(5);
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    // 檢查是否清空垃圾
+                    if (trashBodies.length === 0) {
+                        cleaningSubState = 'TRANSITION';
+                        setTimeout(() => {
+                            cleaningSubState = 'WIPE_TABLE';
+                        }, 1500); // 停頓 1.5 秒
+                    }
+                }
+            }
+
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.translate(-GAME_WIDTH, 0);
+            ctx.drawImage(video, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+            // 變暗背景，凸顯第一人稱虛擬手部
+            ctx.fillStyle = 'rgba(10, 15, 20, 0.75)';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.restore();
+
+            handleFaceLogic();
+            handleHandLogic();
+            renderGame();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleFaceLogic() {
+            isSmiling = false;
+            if (faceResult && faceResult.faceBlendshapes.length > 0) {
+                const blendshapes = faceResult.faceBlendshapes[0].categories;
+                const smileLeft = blendshapes.find(c => c.categoryName === 'mouthSmileLeft')?.score || 0;
+                const smileRight = blendshapes.find(c => c.categoryName === 'mouthSmileRight')?.score || 0;
+                
+                if (smileLeft > 0.4 || smileRight > 0.4) isSmiling = true;
+            }
+
+            if (gameState === 'ORDERING') {
+                if (isSmiling) {
+                    satisfaction = Math.min(100, satisfaction + 0.5);
+                    smileInd.innerText = "😊 微笑保持中";
+                    smileInd.style.color = "#2ecc71";
+                    satBar.style.background = "linear-gradient(90deg, #27ae60, #2ecc71)";
+                } else {
+                    satisfaction = Math.max(0, satisfaction - 0.2);
+                    smileInd.innerText = "😠 客人覺得你臉臭";
+                    smileInd.style.color = "#e74c3c";
+                    satBar.style.background = "linear-gradient(90deg, #c0392b, #e74c3c)";
+                    if (satisfaction <= 0) updateScore(-1);
+                }
+                satBar.style.width = satisfaction + "%";
+            }
+        }
+
+        function handleHandLogic() {
+            if (!handResult || handResult.landmarks.length === 0) {
+                Body.setPosition(rightHandBody, {x: -100, y: -100});
+                lastHandPos = null;
+                return;
+            }
+
+            let rightHandIdx = -1;
+            let leftHandIdx = -1;
+
+            handResult.handednesses.forEach((h, idx) => {
+                if (h[0].categoryName === 'Left') rightHandIdx = idx;
+                else leftHandIdx = idx;
+            });
+
+            if (rightHandIdx !== -1) {
+                const landmarks = handResult.landmarks[rightHandIdx];
+                const palm = landmarks[9]; 
+                const px = (1 - palm.x) * GAME_WIDTH;
+                const py = palm.y * GAME_HEIGHT;
+                
+                if (gameState === 'CLEANING' && cleaningSubState === 'WIPE_TABLE') {
+                    Body.setPosition(rightHandBody, {x: -100, y: -100}); // 取消物理碰撞
+                    checkWiping(px, py);
+                } else if (gameState === 'CLEANING' && cleaningSubState === 'CLEAR_TRASH') {
+                    Body.setPosition(rightHandBody, { x: px, y: py });
+                } else {
+                    Body.setPosition(rightHandBody, { x: px, y: py });
+                }
+
+                if (gameState === 'WASHING' && washingPlate.dirtAmount > 0) {
+                    checkScrubbing(px, py);
+                }
+            } else {
+                Body.setPosition(rightHandBody, {x: -100, y: -100});
+            }
+
+            if (leftHandIdx !== -1) {
+                const landmarks = handResult.landmarks[leftHandIdx];
+                const palm = landmarks[9];
+                const px = (1 - palm.x) * GAME_WIDTH;
+                const py = palm.y * GAME_HEIGHT;
+
+                if (gameState === 'CLEANING' && cleaningSubState === 'WIPE_TABLE') {
+                    Body.setPosition(leftHandBody, {x: -100, y: -100}); // 取消物理碰撞
+                    checkWiping(px, py);
+                } else if (gameState === 'CLEANING' && cleaningSubState === 'CLEAR_TRASH') {
+                    Body.setPosition(leftHandBody, { x: px, y: py });
+                } else {
+                    Body.setPosition(leftHandBody, { x: px, y: py });
+                }
+                
+                if (gameState === 'WASHING' && washingPlate.dirtAmount > 0 && rightHandIdx === -1) {
+                     checkScrubbing(px, py);
+                }
+            } else {
+                Body.setPosition(leftHandBody, {x: -100, y: -100});
+            }
+        }
+
+        function checkWiping(px, py) {
+            stains.forEach(stain => {
+                if (stain.alpha > 0) {
+                    const dist = Math.hypot(px - stain.x, py - stain.y);
+                    if (dist < stain.r + 80) {
+                        stain.alpha = Math.max(0, stain.alpha - 0.08);
+                    }
+                }
+            });
+        }
+
+        function checkScrubbing(px, py) {
+            if (px > washingPlate.x && px < washingPlate.x + washingPlate.w &&
+                py > washingPlate.y && py < washingPlate.y + washingPlate.h) {
+                
+                if (lastHandPos) {
+                    const dist = Math.hypot(px - lastHandPos.x, py - lastHandPos.y);
+                    scrubAccumulator += dist;
+                    
+                    washingPlate.dirtAmount = 100 - (scrubAccumulator / SCRUB_THRESHOLD) * 100;
+                    
+                    if (washingPlate.dirtAmount <= 0) {
+                        washingPlate.dirtAmount = 0;
+                        updateScore(20);
+                    }
+                }
+                lastHandPos = { x: px, y: py };
+            } else {
+                lastHandPos = null;
+            }
+        }
+
+        function drawFirstPersonHand(landmarks, isRight, isWipeMode) {
+            ctx.save();
+            // 在 WIPE_TABLE 階段，雙手都變成綠色 (抹布) 的感覺
+            const baseColor = isWipeMode ? '46, 204, 113' : (isRight ? '52, 152, 219' : '46, 204, 113');
+            
+            // 繪製模擬手臂 (從手腕延伸至螢幕底部)
+            const wrist = landmarks[0];
+            const pxW = (1 - wrist.x) * GAME_WIDTH;
+            const pyW = wrist.y * GAME_HEIGHT;
+            
+            ctx.beginPath();
+            ctx.moveTo(pxW - 25, pyW);
+            ctx.lineTo(pxW - 50, GAME_HEIGHT + 50);
+            ctx.lineTo(pxW + 50, GAME_HEIGHT + 50);
+            ctx.lineTo(pxW + 25, pyW);
+            const armGrad = ctx.createLinearGradient(pxW, pyW, pxW, GAME_HEIGHT);
+            armGrad.addColorStop(0, `rgba(${baseColor}, 0.5)`);
+            armGrad.addColorStop(1, `rgba(${baseColor}, 0.0)`);
+            ctx.fillStyle = armGrad;
+            ctx.fill();
+
+            // 繪製骨架發光特效
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = `rgb(${baseColor})`;
+            ctx.strokeStyle = `rgba(${baseColor}, 0.9)`;
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // 畫骨架連線
+            ctx.beginPath();
+            HAND_CONNECTIONS.forEach(pair => {
+                const p1 = landmarks[pair[0]];
+                const p2 = landmarks[pair[1]];
+                ctx.moveTo((1 - p1.x) * GAME_WIDTH, p1.y * GAME_HEIGHT);
+                ctx.lineTo((1 - p2.x) * GAME_WIDTH, p2.y * GAME_HEIGHT);
+            });
+            ctx.stroke();
+
+            // 畫關節點
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 5;
+            landmarks.forEach(point => {
+                ctx.beginPath();
+                ctx.arc((1 - point.x) * GAME_WIDTH, point.y * GAME_HEIGHT, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            if (!isWipeMode) {
+                // 推垃圾模式：手心光圈
+                const middleMCP = landmarks[9];
+                const pxM = (1 - middleMCP.x) * GAME_WIDTH;
+                const pyM = middleMCP.y * GAME_HEIGHT;
+                ctx.beginPath();
+                ctx.arc(pxM, pyM, 35, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${baseColor}, 0.3)`;
+                ctx.fill();
+                ctx.strokeStyle = `rgba(${baseColor}, 0.8)`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else {
+                // 擦桌子模式：雙手都有抹布
+                const middleMCP = landmarks[9];
+                const pxM = (1 - middleMCP.x) * GAME_WIDTH;
+                const pyM = middleMCP.y * GAME_HEIGHT;
+                const angle = Math.atan2(pyM - pyW, pxM - pxW);
+
+                ctx.translate(pxM, pyM);
+                ctx.rotate(angle);
+                
+                // 畫一塊橘色/黃色的抹布海綿
+                ctx.fillStyle = 'rgba(243, 156, 18, 0.85)';
+                ctx.shadowColor = 'rgba(243, 156, 18, 1)';
+                ctx.shadowBlur = 20;
+                
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(-25, -40, 50, 80, 15);
+                } else {
+                    ctx.rect(-25, -40, 50, 80);
+                }
+                ctx.fill();
+                
+                // 抹布上的紋理線條
+                ctx.strokeStyle = 'rgba(211, 84, 0, 0.6)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-10, -20); ctx.lineTo(-10, 20);
+                ctx.moveTo(10, -20); ctx.lineTo(10, 20);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function renderGame() {
+            if (gameState === 'ORDERING') {
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.font = 'bold 36px Arial';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'black';
+                ctx.fillText('請看著鏡頭保持微笑！', GAME_WIDTH/2, GAME_HEIGHT/2);
+                ctx.textAlign = 'left';
+                ctx.shadowBlur = 0;
+            }
+
+            if (gameState === 'CLEANING') {
+                // 畫出木頭桌子的範圍
+                ctx.fillStyle = '#8B4513'; // 咖啡色木頭桌子
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(100, 100, 760, 400, 20); // 桌子大小
+                } else {
+                    ctx.rect(100, 100, 760, 400);
+                }
+                ctx.fill();
+                ctx.lineWidth = 10;
+                ctx.strokeStyle = '#5C3A21'; // 桌子邊緣
+                ctx.stroke();
+
+                // 畫污漬
+                let remainingStainsCount = 0;
+                stains.forEach(stain => {
+                    if (stain.alpha > 0) {
+                        remainingStainsCount++;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(stain.x, stain.y, stain.r, 0, Math.PI * 2);
+                        // 讓污漬邊緣模糊
+                        let grad = ctx.createRadialGradient(stain.x, stain.y, 0, stain.x, stain.y, stain.r);
+                        grad.addColorStop(0, `rgba(101, 67, 33, ${stain.alpha})`);
+                        grad.addColorStop(1, `rgba(101, 67, 33, 0)`);
+                        ctx.fillStyle = grad;
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                });
+
+                // 畫物理垃圾 (根據 label 不同繪製不同的形狀)
+                trashBodies.forEach(body => {
+                    ctx.save();
+                    ctx.translate(body.position.x, body.position.y);
+                    ctx.rotate(body.angle);
+                    
+                    if (body.label === 'trash_plate') {
+                        // 盤子
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 60, 0, Math.PI * 2);
+                        ctx.fillStyle = '#ecf0f1';
+                        ctx.fill();
+                        ctx.lineWidth = 4;
+                        ctx.strokeStyle = '#bdc3c7';
+                        ctx.stroke();
+                        // 內圈
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 40, 0, Math.PI * 2);
+                        ctx.stroke();
+                    } else if (body.label === 'trash_utensil') {
+                        // 刀叉(長條)
+                        ctx.fillStyle = '#95a5a6';
+                        ctx.fillRect(-10, -50, 20, 100);
+                        ctx.strokeStyle = '#7f8c8d';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(-10, -50, 20, 100);
+                    } else if (body.label === 'trash_cup') {
+                        // 杯子
+                        ctx.fillStyle = '#e74c3c'; // 紅色杯子
+                        ctx.fillRect(-20, -35, 40, 70);
+                        ctx.strokeStyle = '#c0392b';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(-20, -35, 40, 70);
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(-15, -10, 30, 20); // 標籤
+                    } else {
+                        // 紙團
+                        ctx.beginPath();
+                        // 用多邊形模擬紙團
+                        for(let i=0; i<8; i++){
+                            let a = i * Math.PI / 4;
+                            let r = 20 + Math.random() * 10;
+                            if(i===0) ctx.moveTo(r*Math.cos(a), r*Math.sin(a));
+                            else ctx.lineTo(r*Math.cos(a), r*Math.sin(a));
+                        }
+                        ctx.closePath();
+                        ctx.fillStyle = '#ecf0f1';
+                        ctx.fill();
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#bdc3c7';
+                        ctx.stroke();
+                    }
+
+                    ctx.restore();
+                });
+
+                // 狀態文字提示
+                if (cleaningSubState === 'INIT') {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 48px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('開始整理桌子！', GAME_WIDTH/2, GAME_HEIGHT/2);
+                    ctx.textAlign = 'left';
+                } else if (cleaningSubState === 'TRANSITION') {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.font = 'bold 48px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('垃圾清理完畢，開始擦桌子！', GAME_WIDTH/2, GAME_HEIGHT/2);
+                    ctx.textAlign = 'left';
+                } else if (cleaningSubState === 'WIPE_TABLE' && remainingStainsCount === 0) {
+                    // 檢查是否完成清潔
+                    ctx.fillStyle = '#2ecc71';
+                    ctx.font = 'bold 48px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = 'black';
+                    ctx.fillText('✨ 完成清潔 ✨', GAME_WIDTH/2, GAME_HEIGHT/2);
+                    ctx.textAlign = 'left';
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    if (cleaningSubState === 'CLEAR_TRASH') {
+                        ctx.fillText('將垃圾與餐具撥出桌子邊緣', GAME_WIDTH/2, GAME_HEIGHT - 20);
+                    } else if (cleaningSubState === 'WIPE_TABLE') {
+                        ctx.fillText('用雙手海綿擦拭桌面污漬', GAME_WIDTH/2, GAME_HEIGHT - 20);
+                    }
+                    ctx.textAlign = 'left';
+                }
+            }
+
+            if (gameState === 'WASHING') {
+                // 畫盤子底座
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.arc(washingPlate.x + washingPlate.w/2, washingPlate.y + washingPlate.h/2, 100, 0, Math.PI*2);
+                ctx.fill();
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = '#bdc3c7';
+                ctx.stroke();
+
+                if (washingPlate.dirtAmount > 0) {
+                    ctx.fillStyle = `rgba(120, 100, 60, ${washingPlate.dirtAmount / 100})`;
+                    ctx.beginPath();
+                    ctx.arc(washingPlate.x + washingPlate.w/2, washingPlate.y + washingPlate.h/2, 85, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 22px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = 'black';
+                    ctx.fillText('在盤子上快速來回搓洗！', washingPlate.x + 100, washingPlate.y - 20);
+                    ctx.textAlign = 'left';
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.fillStyle = '#2ecc71';
+                    ctx.font = 'bold 32px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('✨ 閃閃發亮 ✨', washingPlate.x + 100, washingPlate.y + 110);
+                    ctx.textAlign = 'left';
+                }
+            }
+
+            // 繪製第一人稱手部
+            if (handResult && handResult.landmarks) {
+                const isWipeMode = (gameState === 'CLEANING' && cleaningSubState === 'WIPE_TABLE');
+                handResult.handednesses.forEach((h, idx) => {
+                    const isRight = h[0].categoryName === 'Left'; // 鏡像反轉
+                    drawFirstPersonHand(handResult.landmarks[idx], isRight, isWipeMode);
+                });
+            }
+        }
+
+        function updateScore(delta) {
+            score += delta;
+            scoreDisplay.innerText = score;
+            if(delta > 0) {
+                scoreDisplay.style.color = '#2ecc71';
+            } else {
+                scoreDisplay.style.color = '#e74c3c';
+            }
+            setTimeout(() => scoreDisplay.style.color = 'white', 500);
+        }
+
+        initMediaPipe();
+    </script>
+</body>
+</html>
