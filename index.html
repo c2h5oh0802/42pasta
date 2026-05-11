@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>怪洨餐館 - MVP 核心架構 (第一人稱視角)</title>
     <style>
+        /* 基礎重置與背景 */
         body {
             margin: 0;
             overflow: hidden;
@@ -15,6 +16,8 @@
             flex-direction: column;
             align-items: center;
         }
+
+        /* 遊戲主容器 */
         #game-container {
             position: relative;
             width: 960px;
@@ -25,6 +28,8 @@
             border-radius: 12px;
             overflow: hidden;
         }
+
+        /* Canvas 與 Video */
         canvas {
             position: absolute;
             top: 0;
@@ -36,6 +41,8 @@
         video {
             display: none;
         }
+
+        /* 遊戲內疊加 UI 層 (HUD) */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -43,7 +50,7 @@
             width: 100%;
             height: 100%;
             z-index: 20;
-            pointer-events: none;
+            pointer-events: none; /* 讓滑鼠點擊可以穿透到下方的 HTML/Canvas */
         }
         .hud {
             position: absolute;
@@ -52,7 +59,7 @@
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        #status-hud { top: 15px; left: 15px; }
+        #status-hud { top: 15px; left: 15px; display: none; } /* 預設隱藏，遊戲中才顯示 */
         #satisfaction-bar-container {
             width: 220px;
             height: 22px;
@@ -68,26 +75,85 @@
             background: linear-gradient(90deg, #27ae60, #2ecc71);
             transition: width 0.1s, background 0.3s;
         }
-        #controls {
-            margin-top: 20px;
-            z-index: 30;
+
+        /* --- 宏觀狀態 UI 面板 (HTML 實作) --- */
+        .panel-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 100;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
         }
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
+        .hidden { display: none !important; }
+
+        /* 標題畫面 */
+        #title-screen h1 {
+            font-size: 64px;
+            color: #f1c40f;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            margin-bottom: 10px;
+        }
+        #title-screen p {
+            font-size: 24px;
+            color: #ccc;
+            margin-bottom: 40px;
+        }
+
+        /* 關卡選擇畫面 */
+        #level-select-screen h2 {
+            font-size: 48px;
+            color: #3498db;
+            margin-bottom: 30px;
+        }
+        .level-grid {
+            display: flex;
+            gap: 20px;
+        }
+        .level-card {
+            background: #2c3e50;
+            border: 2px solid #34495e;
+            border-radius: 12px;
+            padding: 20px;
+            width: 180px;
             cursor: pointer;
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            transition: transform 0.1s, background-color 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s, background 0.2s;
         }
-        button:hover { background-color: #c0392b; transform: translateY(-2px); }
-        button:active { transform: translateY(0); }
+        .level-card:hover { transform: translateY(-5px); background: #34495e; }
+        .level-card.locked { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; }
+        .level-card.locked:hover { transform: none; background: #2c3e50; }
+        .level-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        .level-stars { font-size: 24px; color: #f1c40f; letter-spacing: 2px; }
+
+        /* 結算畫面 */
+        #result-screen h2 { font-size: 48px; margin-bottom: 20px; }
+        #result-money { font-size: 64px; color: #2ecc71; margin-bottom: 10px; }
+        #result-stars { font-size: 48px; color: #f1c40f; margin-bottom: 30px; letter-spacing: 5px; }
+
+        /* 共用按鈕樣式 (HTML 按鈕，僅供滑鼠測試或未來替換為手勢觸發) */
+        .btn {
+            padding: 15px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            background: #e74c3c;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #c0392b;
+            transition: transform 0.1s, box-shadow 0.1s;
+            margin: 10px;
+        }
+        .btn:hover { background: #e74c3c; transform: translateY(2px); box-shadow: 0 2px 0 #c0392b; }
+        .btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* 載入中文字 */
         #loading {
             position: absolute;
             top: 50%;
@@ -95,8 +161,22 @@
             transform: translate(-50%, -50%);
             font-size: 24px;
             font-weight: bold;
-            z-index: 100;
+            z-index: 200;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+        }
+
+        /* 除錯按鈕區 (暫時保留用於測試) */
+        #controls {
+            margin-top: 20px;
+            z-index: 30;
+            display: flex;
+            gap: 10px;
+        }
+        #controls button {
+            padding: 10px 20px; font-size: 14px;
         }
     </style>
     <!-- Matter.js -->
@@ -108,23 +188,59 @@
         <div id="loading">載入 MediaPipe 模型與相機中...</div>
         <video id="webcam" width="960" height="540" autoplay playsinline></video>
         <canvas id="game-canvas" width="960" height="540"></canvas>
+        
+        <!-- 遊戲進行中的 HUD (目前隱藏，進入 GAMEPLAY 才顯示) -->
         <div id="ui-layer">
             <div id="status-hud" class="hud">
-                <div style="font-size: 1.1em;">目前狀態: <span id="state-display" style="font-weight:bold; color:#f1c40f;">ORDERING (接單)</span></div>
-                <div style="margin-top: 5px;">店面分數: <span id="score-display" style="font-weight:bold; font-size: 1.2em;">100</span></div>
-                <div style="margin-top: 10px; font-size: 0.9em; color:#ccc;">客人滿意度 (需微笑保持):</div>
-                <div id="satisfaction-bar-container">
-                    <div id="satisfaction-bar"></div>
+                <div style="font-size: 1.1em;">目標金額: $<span id="target-display">0</span> | 時間: <span id="time-display" style="color:#e74c3c; font-weight:bold;">0</span>s</div>
+                <div style="font-size: 1.1em; margin-top: 5px;">目前位置: <span id="location-display" style="font-weight:bold; color:#3498db;">COUNTER (櫃檯)</span></div>
+                <div style="margin-top: 5px;">營業額: $<span id="score-display" style="font-weight:bold; font-size: 1.2em; color:#2ecc71;">0</span></div>
+                
+                <!-- 暫時保留滿意度條給後續櫃檯邏輯用 -->
+                <div id="satisfaction-container" style="display:none;">
+                    <div style="margin-top: 10px; font-size: 0.9em; color:#ccc;">客人滿意度:</div>
+                    <div id="satisfaction-bar-container">
+                        <div id="satisfaction-bar"></div>
+                    </div>
+                    <div id="smile-indicator" style="margin-top:8px; font-weight:bold; color:#e74c3c;">未偵測到微笑</div>
                 </div>
-                <div id="smile-indicator" style="margin-top:8px; font-weight:bold; color:#e74c3c;">未偵測到微笑</div>
+            </div>
+        </div>
+
+        <!-- 標題畫面 (TITLE) -->
+        <div id="title-screen" class="panel-overlay hidden">
+            <h1>42號義麵店</h1>
+            <p>雙手與微笑，是最好的調味料</p>
+            <button class="btn" onclick="changeMacroState('LEVEL_SELECT')">開始營業</button>
+        </div>
+
+        <!-- 關卡選擇畫面 (LEVEL_SELECT) -->
+        <div id="level-select-screen" class="panel-overlay hidden">
+            <h2>選擇關卡</h2>
+            <div class="level-grid" id="level-grid-container">
+                <!-- 由 JS 動態生成 -->
+            </div>
+            <button class="btn" onclick="changeMacroState('TITLE')" style="margin-top: 40px; background:#7f8c8d; box-shadow: 0 4px 0 #546e7a;">返回標題</button>
+        </div>
+
+        <!-- 結算畫面 (LEVEL_RESULT) -->
+        <div id="result-screen" class="panel-overlay hidden">
+            <h2 id="result-title">關卡結算</h2>
+            <div>總營業額</div>
+            <div id="result-money">$0</div>
+            <div id="result-stars">☆☆☆</div>
+            <div style="display: flex; gap: 20px;">
+                <button class="btn" onclick="changeMacroState('LEVEL_SELECT')" style="background:#3498db; box-shadow: 0 4px 0 #2980b9;">回關卡選單</button>
+                <button class="btn" id="btn-next-level" onclick="startNextLevel()" style="display:none;">下一關</button>
             </div>
         </div>
     </div>
 
+    <!-- 除錯用的狀態強制切換按鈕 -->
     <div id="controls">
-        <button onclick="setGameState('ORDERING')">👉 ORDERING (接單)</button>
-        <button onclick="setGameState('CLEANING')">🧹 CLEANING (清理)</button>
-        <button onclick="setGameState('WASHING')">🍽️ WASHING (洗碗)</button>
+        <button onclick="setMicroLocation('COUNTER')">切換: 櫃檯 (COUNTER)</button>
+        <button onclick="setMicroLocation('DINING_ROOM')">切換: 用餐區 (DINING_ROOM) [測試打掃]</button>
+        <button onclick="setMicroLocation('KITCHEN')">切換: 廚房 (KITCHEN) [測試洗碗]</button>
     </div>
 
     <script type="module">
@@ -134,10 +250,28 @@
             FilesetResolver
         } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
+        // --- 遊戲架構狀態變數 ---
+        let macroState = 'LOADING'; // LOADING, TITLE, LEVEL_SELECT, GAMEPLAY, LEVEL_RESULT
+        let microLocation = 'COUNTER'; // COUNTER, KITCHEN, DINING_ROOM
+        
+        // 關卡設定
+        const LEVELS = [
+            { id: 1, targetMoney: 50, time: 60, tables: 2 },
+            { id: 2, targetMoney: 150, time: 90, tables: 3 },
+            { id: 3, targetMoney: 300, time: 120, tables: 4 }
+        ];
+        let currentLevelIndex = 0;
+        let gameTimer = 0;
+        let gameTimerInterval = null;
+
+        // 存檔系統 (記錄每一關的最高星星數，0代表未解鎖/未過關)
+        let saveMemory = {
+            stars: [0, 0, 0] // 對應 LEVEL 1, 2, 3
+        };
+
         const GAME_WIDTH = 960;
         const GAME_HEIGHT = 540;
-        let gameState = 'ORDERING';
-        let score = 100;
+        let score = 0; // 改為金錢
         let satisfaction = 100;
         let isSmiling = false;
 
@@ -151,10 +285,19 @@
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const loadingEl = document.getElementById('loading');
-        const stateDisplay = document.getElementById('state-display');
+        const stateDisplay = document.getElementById('location-display');
         const scoreDisplay = document.getElementById('score-display');
+        const timeDisplay = document.getElementById('time-display');
+        const targetDisplay = document.getElementById('target-display');
         const satBar = document.getElementById('satisfaction-bar');
         const smileInd = document.getElementById('smile-indicator');
+        const statusHud = document.getElementById('status-hud');
+
+        // UI 畫面元素
+        const titleScreen = document.getElementById('title-screen');
+        const levelSelectScreen = document.getElementById('level-select-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const levelGrid = document.getElementById('level-grid-container');
 
         let faceLandmarker, handLandmarker;
         let lastVideoTime = -1;
@@ -202,8 +345,10 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { width: GAME_WIDTH, height: GAME_HEIGHT } });
                 video.srcObject = stream;
                 video.addEventListener("loadeddata", () => {
-                    loadingEl.style.display = 'none';
+                    loadingEl.classList.add('hidden');
                     initMatterJs();
+                    loadSaveData();
+                    changeMacroState('TITLE'); // 載入完成，進入標題畫面
                     requestAnimationFrame(gameLoop);
                 });
             } catch (err) {
@@ -211,57 +356,149 @@
             }
         }
 
-        const Engine = Matter.Engine,
-              World = Matter.World,
-              Bodies = Matter.Bodies,
-              Body = Matter.Body,
-              Events = Matter.Events;
-
-        let engine, world;
-        let rightHandBody;
-        let leftHandBody;
-        let trashBodies = [];
-        
-        let cleaningSubState = 'INIT'; // INIT, CLEAR_TRASH, TRANSITION, WIPE_TABLE, DONE
-        let lastOrderType = 'PASTA';
-
-        function initMatterJs() {
-            engine = Engine.create();
-            world = engine.world;
-            engine.world.gravity.y = 0;
-
-            // 將手的半徑加大，且綁定在手心，方便大面積撥動
-            rightHandBody = Bodies.circle(-100, -100, 60, { 
-                isStatic: true,
-                label: 'rightHand'
-            });
-            leftHandBody = Bodies.circle(-100, -100, 60, { 
-                isStatic: true,
-                label: 'leftHand'
-            });
-            World.add(world, [rightHandBody, leftHandBody]);
-            
-            // 移除原本的邊界牆壁與垃圾桶感應區
-            // 我們將透過座標判斷垃圾是否被撥出畫面 (掉到桌子外面)
+        // --- 存檔系統 ---
+        function loadSaveData() {
+            const saved = localStorage.getItem('42PastaSave');
+            if (saved) {
+                saveMemory = JSON.parse(saved);
+            } else {
+                // 初次遊玩，解鎖第一關
+                saveMemory = { stars: [0, 0, 0] };
+                saveMemory.stars[0] = 0; // 0星但可玩
+            }
+        }
+        function saveGame() {
+            localStorage.setItem('42PastaSave', JSON.stringify(saveMemory));
         }
 
-        function getTrashInPair(bodyA, bodyB) {
-            if (bodyA.label === 'trash') return { trashBody: bodyA };
-            if (bodyB.label === 'trash') return { trashBody: bodyB };
-            return null;
+        // --- 宏觀狀態切換 ---
+        window.changeMacroState = function(newState) {
+            macroState = newState;
+            // 隱藏所有面板
+            titleScreen.classList.add('hidden');
+            levelSelectScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            statusHud.style.display = 'none';
+
+            if (newState === 'TITLE') {
+                titleScreen.classList.remove('hidden');
+            } else if (newState === 'LEVEL_SELECT') {
+                buildLevelSelectUI();
+                levelSelectScreen.classList.remove('hidden');
+            } else if (newState === 'GAMEPLAY') {
+                statusHud.style.display = 'block';
+                startLevel(currentLevelIndex);
+            } else if (newState === 'LEVEL_RESULT') {
+                showResultScreen();
+            }
+        };
+
+        // --- 關卡選擇與初始化 ---
+        function buildLevelSelectUI() {
+            levelGrid.innerHTML = '';
+            LEVELS.forEach((level, index) => {
+                const isLocked = index > 0 && saveMemory.stars[index - 1] < 2; // 需要前一關2星解鎖
+                
+                const card = document.createElement('div');
+                card.className = `level-card ${isLocked ? 'locked' : ''}`;
+                
+                let starText = isLocked ? '🔒' : '☆'.repeat(3);
+                if (!isLocked && saveMemory.stars[index] > 0) {
+                    starText = '★'.repeat(saveMemory.stars[index]) + '☆'.repeat(3 - saveMemory.stars[index]);
+                }
+
+                card.innerHTML = `
+                    <div class="level-title">關卡 ${level.id}</div>
+                    <div style="font-size: 14px; color: #bdc3c7; margin-bottom: 10px;">目標: $${level.targetMoney} / ${level.time}s</div>
+                    <div class="level-stars">${starText}</div>
+                `;
+
+                if (!isLocked) {
+                    card.onclick = () => {
+                        currentLevelIndex = index;
+                        changeMacroState('GAMEPLAY');
+                    };
+                }
+                levelGrid.appendChild(card);
+            });
         }
 
-        window.setGameState = function(state) {
-            gameState = state;
-            stateDisplay.innerText = state;
+        function startLevel(index) {
+            const levelData = LEVELS[index];
+            score = 0;
+            scoreDisplay.innerText = score;
+            targetDisplay.innerText = levelData.targetMoney;
+            gameTimer = levelData.time;
+            timeDisplay.innerText = gameTimer;
             
+            setMicroLocation('COUNTER'); // 遊戲開始預設在櫃檯
+
+            // 啟動倒數計時器
+            if (gameTimerInterval) clearInterval(gameTimerInterval);
+            gameTimerInterval = setInterval(() => {
+                if (macroState === 'GAMEPLAY') {
+                    gameTimer--;
+                    timeDisplay.innerText = gameTimer;
+                    if (gameTimer <= 0) {
+                        clearInterval(gameTimerInterval);
+                        changeMacroState('LEVEL_RESULT');
+                    }
+                }
+            }, 1000);
+        }
+
+        function showResultScreen() {
+            const levelData = LEVELS[currentLevelIndex];
+            document.getElementById('result-money').innerText = `$${score}`;
+            
+            // 計算星星
+            let earnedStars = 0;
+            if (score >= levelData.targetMoney * 1.5) earnedStars = 3;
+            else if (score >= levelData.targetMoney) earnedStars = 2;
+            else if (score >= levelData.targetMoney * 0.5) earnedStars = 1;
+
+            let starDisplay = '';
+            for(let i=0; i<3; i++) starDisplay += (i < earnedStars) ? '★' : '☆';
+            document.getElementById('result-stars').innerText = starDisplay;
+
+            // 存檔更新
+            if (earnedStars > saveMemory.stars[currentLevelIndex]) {
+                saveMemory.stars[currentLevelIndex] = earnedStars;
+                saveGame();
+            }
+
+            // 判斷是否顯示下一關按鈕 (有下一關且拿到2星以上)
+            const nextBtn = document.getElementById('btn-next-level');
+            if (currentLevelIndex < LEVELS.length - 1 && earnedStars >= 2) {
+                nextBtn.style.display = 'inline-block';
+            } else {
+                nextBtn.style.display = 'none';
+            }
+
+            resultScreen.classList.remove('hidden');
+        }
+
+        window.startNextLevel = function() {
+            currentLevelIndex++;
+            changeMacroState('GAMEPLAY');
+        };
+
+        // --- 微觀空間切換 (Micro Location) ---
+        window.setMicroLocation = function(loc) {
+            if (macroState !== 'GAMEPLAY') return;
+            microLocation = loc;
+            stateDisplay.innerText = loc;
+            
+            // 清理舊狀態物件
             trashBodies.forEach(b => World.remove(world, b));
             trashBodies = [];
             stains = [];
             scrubAccumulator = 0;
             washingPlate.dirtAmount = 100;
 
-            if (state === 'CLEANING') {
+            // 根據不同房間初始化環境
+            if (loc === 'DINING_ROOM') {
+                // 為了測試，進入用餐區時直接生成打掃事件
                 cleaningSubState = 'INIT';
                 setTimeout(() => { cleaningSubState = 'CLEAR_TRASH'; }, 1500); // 提示 1.5 秒後開始
                 lastOrderType = Math.random() > 0.5 ? 'PASTA' : 'DRINK';
@@ -301,6 +538,35 @@
             }
         };
 
+        const Engine = Matter.Engine,
+              World = Matter.World,
+              Bodies = Matter.Bodies,
+              Body = Matter.Body,
+              Events = Matter.Events;
+
+        let engine, world;
+        let rightHandBody;
+        let leftHandBody;
+        
+        let cleaningSubState = 'INIT'; // INIT, CLEAR_TRASH, TRANSITION, WIPE_TABLE, DONE
+        let lastOrderType = 'PASTA';
+
+        function initMatterJs() {
+            engine = Engine.create();
+            world = engine.world;
+            engine.world.gravity.y = 0;
+
+            rightHandBody = Bodies.circle(-100, -100, 60, { 
+                isStatic: true,
+                label: 'rightHand'
+            });
+            leftHandBody = Bodies.circle(-100, -100, 60, { 
+                isStatic: true,
+                label: 'leftHand'
+            });
+            World.add(world, [rightHandBody, leftHandBody]);
+        }
+
         function gameLoop() {
             if (video.currentTime !== lastVideoTime) {
                 lastVideoTime = video.currentTime;
@@ -310,27 +576,25 @@
 
             Engine.update(engine, 1000 / 60);
 
-            // 檢查垃圾是否被撥出畫面 (掉到桌子外面)
-            if (gameState === 'CLEANING') {
+            // 檢查垃圾是否被撥出畫面
+            if (microLocation === 'DINING_ROOM') {
                 if (cleaningSubState === 'CLEAR_TRASH') {
                     trashBodies = trashBodies.filter(body => {
                         const px = body.position.x;
                         const py = body.position.y;
-                        // 桌子範圍 100~860, 100~500。加上容錯讓掉落判定更確實
                         if (px < 50 || px > 910 || py < 50 || py > 550) {
                             World.remove(world, body);
-                            updateScore(5);
+                            updateScore(5); // 賺取清理費
                             return false;
                         }
                         return true;
                     });
 
-                    // 檢查是否清空垃圾
                     if (trashBodies.length === 0) {
                         cleaningSubState = 'TRANSITION';
                         setTimeout(() => {
                             cleaningSubState = 'WIPE_TABLE';
-                        }, 1500); // 停頓 1.5 秒
+                        }, 1500);
                     }
                 }
             }
@@ -338,20 +602,28 @@
             ctx.save();
             ctx.scale(-1, 1);
             ctx.translate(-GAME_WIDTH, 0);
-            ctx.drawImage(video, 0, 0, GAME_WIDTH, GAME_HEIGHT);
-            // 變暗背景，凸顯第一人稱虛擬手部
+            
+            // 只有在 GAMEPLAY 狀態下繪製攝影機，選單狀態可以黑畫面或留底圖
+            if (macroState === 'GAMEPLAY') {
+                ctx.drawImage(video, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+            }
+            
             ctx.fillStyle = 'rgba(10, 15, 20, 0.75)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             ctx.restore();
 
-            handleFaceLogic();
-            handleHandLogic();
-            renderGame();
+            if (macroState === 'GAMEPLAY') {
+                handleFaceLogic();
+                handleHandLogic();
+                renderGame();
+            }
 
             requestAnimationFrame(gameLoop);
         }
 
         function handleFaceLogic() {
+            if (microLocation !== 'COUNTER') return; // 不在櫃檯不判定微笑
+
             isSmiling = false;
             if (faceResult && faceResult.faceBlendshapes.length > 0) {
                 const blendshapes = faceResult.faceBlendshapes[0].categories;
@@ -361,21 +633,19 @@
                 if (smileLeft > 0.4 || smileRight > 0.4) isSmiling = true;
             }
 
-            if (gameState === 'ORDERING') {
-                if (isSmiling) {
-                    satisfaction = Math.min(100, satisfaction + 0.5);
-                    smileInd.innerText = "😊 微笑保持中";
-                    smileInd.style.color = "#2ecc71";
-                    satBar.style.background = "linear-gradient(90deg, #27ae60, #2ecc71)";
-                } else {
-                    satisfaction = Math.max(0, satisfaction - 0.2);
-                    smileInd.innerText = "😠 客人覺得你臉臭";
-                    smileInd.style.color = "#e74c3c";
-                    satBar.style.background = "linear-gradient(90deg, #c0392b, #e74c3c)";
-                    if (satisfaction <= 0) updateScore(-1);
-                }
-                satBar.style.width = satisfaction + "%";
+            if (isSmiling) {
+                satisfaction = Math.min(100, satisfaction + 0.5);
+                smileInd.innerText = "😊 微笑保持中";
+                smileInd.style.color = "#2ecc71";
+                satBar.style.background = "linear-gradient(90deg, #27ae60, #2ecc71)";
+            } else {
+                satisfaction = Math.max(0, satisfaction - 0.2);
+                smileInd.innerText = "😠 客人覺得你臉臭";
+                smileInd.style.color = "#e74c3c";
+                satBar.style.background = "linear-gradient(90deg, #c0392b, #e74c3c)";
+                if (satisfaction <= 0) updateScore(-1); // 扣錢
             }
+            satBar.style.width = satisfaction + "%";
         }
 
         function handleHandLogic() {
@@ -399,16 +669,16 @@
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
                 
-                if (gameState === 'CLEANING' && cleaningSubState === 'WIPE_TABLE') {
-                    Body.setPosition(rightHandBody, {x: -100, y: -100}); // 取消物理碰撞
+                if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
+                    Body.setPosition(rightHandBody, {x: -100, y: -100}); 
                     checkWiping(px, py);
-                } else if (gameState === 'CLEANING' && cleaningSubState === 'CLEAR_TRASH') {
+                } else if (microLocation === 'DINING_ROOM' && cleaningSubState === 'CLEAR_TRASH') {
                     Body.setPosition(rightHandBody, { x: px, y: py });
                 } else {
                     Body.setPosition(rightHandBody, { x: px, y: py });
                 }
 
-                if (gameState === 'WASHING' && washingPlate.dirtAmount > 0) {
+                if (microLocation === 'KITCHEN' && washingPlate.dirtAmount > 0) {
                     checkScrubbing(px, py);
                 }
             } else {
@@ -421,16 +691,16 @@
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
 
-                if (gameState === 'CLEANING' && cleaningSubState === 'WIPE_TABLE') {
-                    Body.setPosition(leftHandBody, {x: -100, y: -100}); // 取消物理碰撞
+                if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
+                    Body.setPosition(leftHandBody, {x: -100, y: -100});
                     checkWiping(px, py);
-                } else if (gameState === 'CLEANING' && cleaningSubState === 'CLEAR_TRASH') {
+                } else if (microLocation === 'DINING_ROOM' && cleaningSubState === 'CLEAR_TRASH') {
                     Body.setPosition(leftHandBody, { x: px, y: py });
                 } else {
                     Body.setPosition(leftHandBody, { x: px, y: py });
                 }
                 
-                if (gameState === 'WASHING' && washingPlate.dirtAmount > 0 && rightHandIdx === -1) {
+                if (microLocation === 'KITCHEN' && washingPlate.dirtAmount > 0 && rightHandIdx === -1) {
                      checkScrubbing(px, py);
                 }
             } else {
@@ -566,29 +836,35 @@
         }
 
         function renderGame() {
-            if (gameState === 'ORDERING') {
+            // 切換空間導航按鈕 (僅在 GAMEPLAY 顯示，之後會換成手勢觸發)
+            drawNavigationArrows();
+
+            if (microLocation === 'COUNTER') {
                 ctx.fillStyle = 'rgba(255,255,255,0.9)';
                 ctx.font = 'bold 36px Arial';
                 ctx.textAlign = 'center';
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = 'black';
-                ctx.fillText('請看著鏡頭保持微笑！', GAME_WIDTH/2, GAME_HEIGHT/2);
+                ctx.fillText('櫃檯區：請看著鏡頭保持微笑！', GAME_WIDTH/2, GAME_HEIGHT/2);
                 ctx.textAlign = 'left';
                 ctx.shadowBlur = 0;
+                document.getElementById('satisfaction-container').style.display = 'block';
+            } else {
+                document.getElementById('satisfaction-container').style.display = 'none';
             }
 
-            if (gameState === 'CLEANING') {
+            if (microLocation === 'DINING_ROOM') {
                 // 畫出木頭桌子的範圍
-                ctx.fillStyle = '#8B4513'; // 咖啡色木頭桌子
+                ctx.fillStyle = '#8B4513';
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(100, 100, 760, 400, 20); // 桌子大小
+                    ctx.roundRect(100, 100, 760, 400, 20);
                 } else {
                     ctx.rect(100, 100, 760, 400);
                 }
                 ctx.fill();
                 ctx.lineWidth = 10;
-                ctx.strokeStyle = '#5C3A21'; // 桌子邊緣
+                ctx.strokeStyle = '#5C3A21';
                 ctx.stroke();
 
                 // 畫污漬
@@ -599,7 +875,6 @@
                         ctx.save();
                         ctx.beginPath();
                         ctx.arc(stain.x, stain.y, stain.r, 0, Math.PI * 2);
-                        // 讓污漬邊緣模糊
                         let grad = ctx.createRadialGradient(stain.x, stain.y, 0, stain.x, stain.y, stain.r);
                         grad.addColorStop(0, `rgba(101, 67, 33, ${stain.alpha})`);
                         grad.addColorStop(1, `rgba(101, 67, 33, 0)`);
@@ -609,14 +884,13 @@
                     }
                 });
 
-                // 畫物理垃圾 (根據 label 不同繪製不同的形狀)
+                // 畫物理垃圾
                 trashBodies.forEach(body => {
                     ctx.save();
                     ctx.translate(body.position.x, body.position.y);
                     ctx.rotate(body.angle);
                     
                     if (body.label === 'trash_plate') {
-                        // 盤子
                         ctx.beginPath();
                         ctx.arc(0, 0, 60, 0, Math.PI * 2);
                         ctx.fillStyle = '#ecf0f1';
@@ -624,30 +898,25 @@
                         ctx.lineWidth = 4;
                         ctx.strokeStyle = '#bdc3c7';
                         ctx.stroke();
-                        // 內圈
                         ctx.beginPath();
                         ctx.arc(0, 0, 40, 0, Math.PI * 2);
                         ctx.stroke();
                     } else if (body.label === 'trash_utensil') {
-                        // 刀叉(長條)
                         ctx.fillStyle = '#95a5a6';
                         ctx.fillRect(-10, -50, 20, 100);
                         ctx.strokeStyle = '#7f8c8d';
                         ctx.lineWidth = 2;
                         ctx.strokeRect(-10, -50, 20, 100);
                     } else if (body.label === 'trash_cup') {
-                        // 杯子
-                        ctx.fillStyle = '#e74c3c'; // 紅色杯子
+                        ctx.fillStyle = '#e74c3c';
                         ctx.fillRect(-20, -35, 40, 70);
                         ctx.strokeStyle = '#c0392b';
                         ctx.lineWidth = 2;
                         ctx.strokeRect(-20, -35, 40, 70);
                         ctx.fillStyle = 'white';
-                        ctx.fillRect(-15, -10, 30, 20); // 標籤
+                        ctx.fillRect(-15, -10, 30, 20);
                     } else {
-                        // 紙團
                         ctx.beginPath();
-                        // 用多邊形模擬紙團
                         for(let i=0; i<8; i++){
                             let a = i * Math.PI / 4;
                             let r = 20 + Math.random() * 10;
@@ -661,7 +930,6 @@
                         ctx.strokeStyle = '#bdc3c7';
                         ctx.stroke();
                     }
-
                     ctx.restore();
                 });
 
@@ -683,7 +951,6 @@
                     ctx.fillText('垃圾清理完畢，開始擦桌子！', GAME_WIDTH/2, GAME_HEIGHT/2);
                     ctx.textAlign = 'left';
                 } else if (cleaningSubState === 'WIPE_TABLE' && remainingStainsCount === 0) {
-                    // 檢查是否完成清潔
                     ctx.fillStyle = '#2ecc71';
                     ctx.font = 'bold 48px Arial';
                     ctx.textAlign = 'center';
@@ -705,7 +972,7 @@
                 }
             }
 
-            if (gameState === 'WASHING') {
+            if (microLocation === 'KITCHEN') {
                 // 畫盤子底座
                 ctx.fillStyle = '#ecf0f1';
                 ctx.beginPath();
@@ -740,12 +1007,63 @@
 
             // 繪製第一人稱手部
             if (handResult && handResult.landmarks) {
-                const isWipeMode = (gameState === 'CLEANING' && cleaningSubState === 'WIPE_TABLE');
+                const isWipeMode = (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE');
                 handResult.handednesses.forEach((h, idx) => {
                     const isRight = h[0].categoryName === 'Left'; // 鏡像反轉
                     drawFirstPersonHand(handResult.landmarks[idx], isRight, isWipeMode);
                 });
             }
+        }
+
+        // --- 繪製空間導航箭頭 (供後續手勢觸發用) ---
+        function drawNavigationArrows() {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 3;
+
+            // 左側按鈕
+            if (microLocation !== 'COUNTER') {
+                ctx.beginPath();
+                ctx.moveTo(30, GAME_HEIGHT/2);
+                ctx.lineTo(80, GAME_HEIGHT/2 - 40);
+                ctx.lineTo(80, GAME_HEIGHT/2 + 40);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.fillText('櫃檯', 10, GAME_HEIGHT/2 + 70);
+            }
+
+            // 頂部按鈕 (廚房)
+            if (microLocation !== 'KITCHEN') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.moveTo(GAME_WIDTH/2, 30);
+                ctx.lineTo(GAME_WIDTH/2 - 40, 80);
+                ctx.lineTo(GAME_WIDTH/2 + 40, 80);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.fillText('廚房', GAME_WIDTH/2 - 20, 110);
+            }
+
+            // 右側按鈕 (用餐區)
+            if (microLocation !== 'DINING_ROOM') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.moveTo(GAME_WIDTH - 30, GAME_HEIGHT/2);
+                ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT/2 - 40);
+                ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT/2 + 40);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.fillText('用餐區', GAME_WIDTH - 80, GAME_HEIGHT/2 + 70);
+            }
+
+            ctx.restore();
         }
 
         function updateScore(delta) {
