@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,7 +25,7 @@
             height: 540px;
             margin-top: 20px;
             background-color: #2c3e50;
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
             border-radius: 12px;
             overflow: hidden;
         }
@@ -38,6 +39,7 @@
             height: 100%;
             z-index: 10;
         }
+
         video {
             display: none;
         }
@@ -50,16 +52,25 @@
             width: 100%;
             height: 100%;
             z-index: 20;
-            pointer-events: none; /* 讓滑鼠點擊可以穿透到下方的 HTML/Canvas */
+            pointer-events: none;
+            /* 讓滑鼠點擊可以穿透到下方的 HTML/Canvas */
         }
+
         .hud {
             position: absolute;
             padding: 15px;
             background: rgba(0, 0, 0, 0.75);
             border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        #status-hud { top: 15px; left: 15px; display: none; } /* 預設隱藏，遊戲中才顯示 */
+
+        #status-hud {
+            top: 15px;
+            left: 15px;
+            display: none;
+        }
+
+        /* 預設隱藏，遊戲中才顯示 */
         #satisfaction-bar-container {
             width: 220px;
             height: 22px;
@@ -67,8 +78,9 @@
             border-radius: 11px;
             overflow: hidden;
             margin-top: 8px;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
         }
+
         #satisfaction-bar {
             width: 100%;
             height: 100%;
@@ -91,15 +103,19 @@
             align-items: center;
             text-align: center;
         }
-        .hidden { display: none !important; }
+
+        .hidden {
+            display: none !important;
+        }
 
         /* 標題畫面 */
         #title-screen h1 {
             font-size: 64px;
             color: #f1c40f;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
             margin-bottom: 10px;
         }
+
         #title-screen p {
             font-size: 24px;
             color: #ccc;
@@ -112,10 +128,12 @@
             color: #3498db;
             margin-bottom: 30px;
         }
+
         .level-grid {
             display: flex;
             gap: 20px;
         }
+
         .level-card {
             background: #2c3e50;
             border: 2px solid #34495e;
@@ -125,16 +143,53 @@
             cursor: pointer;
             transition: transform 0.2s, background 0.2s;
         }
-        .level-card:hover { transform: translateY(-5px); background: #34495e; }
-        .level-card.locked { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; }
-        .level-card.locked:hover { transform: none; background: #2c3e50; }
-        .level-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-        .level-stars { font-size: 24px; color: #f1c40f; letter-spacing: 2px; }
+
+        .level-card:hover {
+            transform: translateY(-5px);
+            background: #34495e;
+        }
+
+        .level-card.locked {
+            opacity: 0.5;
+            filter: grayscale(100%);
+            cursor: not-allowed;
+        }
+
+        .level-card.locked:hover {
+            transform: none;
+            background: #2c3e50;
+        }
+
+        .level-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .level-stars {
+            font-size: 24px;
+            color: #f1c40f;
+            letter-spacing: 2px;
+        }
 
         /* 結算畫面 */
-        #result-screen h2 { font-size: 48px; margin-bottom: 20px; }
-        #result-money { font-size: 64px; color: #2ecc71; margin-bottom: 10px; }
-        #result-stars { font-size: 48px; color: #f1c40f; margin-bottom: 30px; letter-spacing: 5px; }
+        #result-screen h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        #result-money {
+            font-size: 64px;
+            color: #2ecc71;
+            margin-bottom: 10px;
+        }
+
+        #result-stars {
+            font-size: 48px;
+            color: #f1c40f;
+            margin-bottom: 30px;
+            letter-spacing: 5px;
+        }
 
         /* 共用按鈕樣式 (HTML 按鈕，僅供滑鼠測試或未來替換為手勢觸發) */
         .btn {
@@ -150,8 +205,17 @@
             transition: transform 0.1s, box-shadow 0.1s;
             margin: 10px;
         }
-        .btn:hover { background: #e74c3c; transform: translateY(2px); box-shadow: 0 2px 0 #c0392b; }
-        .btn:active { transform: translateY(4px); box-shadow: none; }
+
+        .btn:hover {
+            background: #e74c3c;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #c0392b;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
 
         /* 載入中文字 */
         #loading {
@@ -162,8 +226,8 @@
             font-size: 24px;
             font-weight: bold;
             z-index: 200;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            background: rgba(0,0,0,0.8);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.8);
             padding: 20px 40px;
             border-radius: 10px;
         }
@@ -175,27 +239,33 @@
             display: flex;
             gap: 10px;
         }
+
         #controls button {
-            padding: 10px 20px; font-size: 14px;
+            padding: 10px 20px;
+            font-size: 14px;
         }
     </style>
     <!-- Matter.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 </head>
+
 <body>
 
     <div id="game-container">
         <div id="loading">載入 MediaPipe 模型與相機中...</div>
         <video id="webcam" width="960" height="540" autoplay playsinline></video>
         <canvas id="game-canvas" width="960" height="540"></canvas>
-        
+
         <!-- 遊戲進行中的 HUD (目前隱藏，進入 GAMEPLAY 才顯示) -->
         <div id="ui-layer">
             <div id="status-hud" class="hud">
-                <div style="font-size: 1.1em;">目標金額: $<span id="target-display">0</span> | 時間: <span id="time-display" style="color:#e74c3c; font-weight:bold;">0</span>s</div>
-                <div style="font-size: 1.1em; margin-top: 5px;">目前位置: <span id="location-display" style="font-weight:bold; color:#3498db;">COUNTER (櫃檯)</span></div>
-                <div style="margin-top: 5px;">營業額: $<span id="score-display" style="font-weight:bold; font-size: 1.2em; color:#2ecc71;">0</span></div>
-                
+                <div style="font-size: 1.1em;">目標金額: $<span id="target-display">0</span> | 時間: <span id="time-display"
+                        style="color:#e74c3c; font-weight:bold;">0</span>s</div>
+                <div style="font-size: 1.1em; margin-top: 5px;">目前位置: <span id="location-display"
+                        style="font-weight:bold; color:#3498db;">COUNTER (櫃檯)</span></div>
+                <div style="margin-top: 5px;">營業額: $<span id="score-display"
+                        style="font-weight:bold; font-size: 1.2em; color:#2ecc71;">0</span></div>
+
                 <!-- 暫時保留滿意度條給後續櫃檯邏輯用 -->
                 <div id="satisfaction-container" style="display:none;">
                     <div style="margin-top: 10px; font-size: 0.9em; color:#ccc;">客人滿意度:</div>
@@ -220,7 +290,8 @@
             <div class="level-grid" id="level-grid-container">
                 <!-- 由 JS 動態生成 -->
             </div>
-            <button class="btn" onclick="changeMacroState('TITLE')" style="margin-top: 40px; background:#7f8c8d; box-shadow: 0 4px 0 #546e7a;">返回標題</button>
+            <button class="btn" onclick="changeMacroState('TITLE')"
+                style="margin-top: 40px; background:#7f8c8d; box-shadow: 0 4px 0 #546e7a;">返回標題</button>
         </div>
 
         <!-- 結算畫面 (LEVEL_RESULT) -->
@@ -230,7 +301,8 @@
             <div id="result-money">$0</div>
             <div id="result-stars">☆☆☆</div>
             <div style="display: flex; gap: 20px;">
-                <button class="btn" onclick="changeMacroState('LEVEL_SELECT')" style="background:#3498db; box-shadow: 0 4px 0 #2980b9;">回關卡選單</button>
+                <button class="btn" onclick="changeMacroState('LEVEL_SELECT')"
+                    style="background:#3498db; box-shadow: 0 4px 0 #2980b9;">回關卡選單</button>
                 <button class="btn" id="btn-next-level" onclick="startNextLevel()" style="display:none;">下一關</button>
             </div>
         </div>
@@ -253,7 +325,7 @@
         // --- 遊戲架構狀態變數 ---
         let macroState = 'LOADING'; // LOADING, TITLE, LEVEL_SELECT, GAMEPLAY, LEVEL_RESULT
         let microLocation = 'COUNTER'; // COUNTER, KITCHEN, DINING_ROOM
-        
+
         // 關卡設定
         const LEVELS = [
             { id: 1, targetMoney: 50, time: 60, tables: 2 },
@@ -286,8 +358,8 @@
         let hoverStartTime = 0;
         const HOVER_DWELL_TIME = 1500; // 停留 1.5 秒觸發
         const NAV_ZONES = {
-            COUNTER:     { x: 0,   y: 190, w: 100, h: 160 },
-            KITCHEN:     { x: 420, y: 0,   w: 120, h: 130 },
+            COUNTER: { x: 0, y: 190, w: 100, h: 160 },
+            KITCHEN: { x: 420, y: 0, w: 120, h: 130 },
             DINING_ROOM: { x: 860, y: 190, w: 100, h: 160 }
         };
         let dwellProgress = 0;
@@ -386,7 +458,7 @@
         }
 
         // --- 宏觀狀態切換 ---
-        window.changeMacroState = function(newState) {
+        window.changeMacroState = function (newState) {
             macroState = newState;
             // 隱藏所有面板
             titleScreen.classList.add('hidden');
@@ -412,10 +484,10 @@
             levelGrid.innerHTML = '';
             LEVELS.forEach((level, index) => {
                 const isLocked = index > 0 && saveMemory.stars[index - 1] < 2; // 需要前一關2星解鎖
-                
+
                 const card = document.createElement('div');
                 card.className = `level-card ${isLocked ? 'locked' : ''}`;
-                
+
                 let starText = isLocked ? '🔒' : '☆'.repeat(3);
                 if (!isLocked && saveMemory.stars[index] > 0) {
                     starText = '★'.repeat(saveMemory.stars[index]) + '☆'.repeat(3 - saveMemory.stars[index]);
@@ -444,7 +516,7 @@
             targetDisplay.innerText = levelData.targetMoney;
             gameTimer = levelData.time;
             timeDisplay.innerText = gameTimer;
-            
+
             setMicroLocation('COUNTER'); // 遊戲開始預設在櫃檯
 
             // 啟動倒數計時器
@@ -464,7 +536,7 @@
         function showResultScreen() {
             const levelData = LEVELS[currentLevelIndex];
             document.getElementById('result-money').innerText = `$${score}`;
-            
+
             // 計算星星
             let earnedStars = 0;
             if (score >= levelData.targetMoney * 1.5) earnedStars = 3;
@@ -472,7 +544,7 @@
             else if (score >= levelData.targetMoney * 0.5) earnedStars = 1;
 
             let starDisplay = '';
-            for(let i=0; i<3; i++) starDisplay += (i < earnedStars) ? '★' : '☆';
+            for (let i = 0; i < 3; i++) starDisplay += (i < earnedStars) ? '★' : '☆';
             document.getElementById('result-stars').innerText = starDisplay;
 
             // 存檔更新
@@ -492,17 +564,17 @@
             resultScreen.classList.remove('hidden');
         }
 
-        window.startNextLevel = function() {
+        window.startNextLevel = function () {
             currentLevelIndex++;
             changeMacroState('GAMEPLAY');
         };
 
         // --- 微觀空間切換 (Micro Location) ---
-        window.setMicroLocation = function(loc) {
+        window.setMicroLocation = function (loc) {
             if (macroState !== 'GAMEPLAY') return;
             microLocation = loc;
             stateDisplay.innerText = loc;
-            
+
             // 清理舊狀態物件
             trashBodies.forEach(b => World.remove(world, b));
             trashBodies = [];
@@ -532,7 +604,7 @@
                 // 生成紙團
                 const paperCount = 2 + Math.floor(Math.random() * 3);
                 for (let i = 0; i < paperCount; i++) {
-                    let trash = Bodies.circle(200 + Math.random()*560, 150 + Math.random()*250, 25, {
+                    let trash = Bodies.circle(200 + Math.random() * 560, 150 + Math.random() * 250, 25, {
                         frictionAir: 0.15,
                         label: 'trash_paper',
                         restitution: 0.3
@@ -541,10 +613,10 @@
                     World.add(world, trash);
                 }
 
-                for(let i = 0; i < 5; i++) {
+                for (let i = 0; i < 5; i++) {
                     stains.push({
-                        x: 200 + Math.random()*560,
-                        y: 150 + Math.random()*250,
+                        x: 200 + Math.random() * 560,
+                        y: 150 + Math.random() * 250,
                         r: 45,
                         alpha: 1.0
                     });
@@ -596,16 +668,15 @@
         }
 
         const Engine = Matter.Engine,
-              World = Matter.World,
-              Bodies = Matter.Bodies,
-              Body = Matter.Body,
-              Events = Matter.Events;
+            World = Matter.World,
+            Bodies = Matter.Bodies,
+            Body = Matter.Body,
+            Events = Matter.Events;
 
         let engine, world;
         let rightHandBody;
         let leftHandBody;
-        
-        let trashBodies = [];
+
         let cleaningSubState = 'INIT'; // INIT, CLEAR_TRASH, TRANSITION, WIPE_TABLE, DONE
         let lastOrderType = 'PASTA';
 
@@ -614,11 +685,11 @@
             world = engine.world;
             engine.world.gravity.y = 0;
 
-            rightHandBody = Bodies.circle(-100, -100, 60, { 
+            rightHandBody = Bodies.circle(-100, -100, 60, {
                 isStatic: true,
                 label: 'rightHand'
             });
-            leftHandBody = Bodies.circle(-100, -100, 60, { 
+            leftHandBody = Bodies.circle(-100, -100, 60, {
                 isStatic: true,
                 label: 'leftHand'
             });
@@ -660,12 +731,12 @@
             ctx.save();
             ctx.scale(-1, 1);
             ctx.translate(-GAME_WIDTH, 0);
-            
+
             // 只有在 GAMEPLAY 狀態下繪製攝影機，選單狀態可以黑畫面或留底圖
             if (macroState === 'GAMEPLAY') {
                 ctx.drawImage(video, 0, 0, GAME_WIDTH, GAME_HEIGHT);
             }
-            
+
             ctx.fillStyle = 'rgba(10, 15, 20, 0.75)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             ctx.restore();
@@ -687,7 +758,7 @@
                 const blendshapes = faceResult.faceBlendshapes[0].categories;
                 const smileLeft = blendshapes.find(c => c.categoryName === 'mouthSmileLeft')?.score || 0;
                 const smileRight = blendshapes.find(c => c.categoryName === 'mouthSmileRight')?.score || 0;
-                
+
                 if (smileLeft > 0.4 || smileRight > 0.4) isSmiling = true;
             }
 
@@ -709,7 +780,7 @@
         function handleHandLogic() {
             activeHandPositions = [];
             if (!handResult || handResult.landmarks.length === 0) {
-                Body.setPosition(rightHandBody, {x: -100, y: -100});
+                Body.setPosition(rightHandBody, { x: -100, y: -100 });
                 lastHandPos = null;
                 checkDwellNavigation();
                 return;
@@ -725,13 +796,13 @@
 
             if (rightHandIdx !== -1) {
                 const landmarks = handResult.landmarks[rightHandIdx];
-                const palm = landmarks[9]; 
+                const palm = landmarks[9];
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
-                activeHandPositions.push({x: px, y: py});
-                
+                activeHandPositions.push({ x: px, y: py });
+
                 if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
-                    Body.setPosition(rightHandBody, {x: -100, y: -100}); 
+                    Body.setPosition(rightHandBody, { x: -100, y: -100 });
                     checkWiping(px, py);
                 } else if (microLocation === 'DINING_ROOM' && cleaningSubState === 'CLEAR_TRASH') {
                     Body.setPosition(rightHandBody, { x: px, y: py });
@@ -743,7 +814,7 @@
                     checkScrubbing(px, py);
                 }
             } else {
-                Body.setPosition(rightHandBody, {x: -100, y: -100});
+                Body.setPosition(rightHandBody, { x: -100, y: -100 });
             }
 
             if (leftHandIdx !== -1) {
@@ -751,22 +822,22 @@
                 const palm = landmarks[9];
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
-                activeHandPositions.push({x: px, y: py});
+                activeHandPositions.push({ x: px, y: py });
 
                 if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
-                    Body.setPosition(leftHandBody, {x: -100, y: -100});
+                    Body.setPosition(leftHandBody, { x: -100, y: -100 });
                     checkWiping(px, py);
                 } else if (microLocation === 'DINING_ROOM' && cleaningSubState === 'CLEAR_TRASH') {
                     Body.setPosition(leftHandBody, { x: px, y: py });
                 } else {
                     Body.setPosition(leftHandBody, { x: px, y: py });
                 }
-                
+
                 if (microLocation === 'KITCHEN' && washingPlate.dirtAmount > 0 && rightHandIdx === -1) {
-                     checkScrubbing(px, py);
+                    checkScrubbing(px, py);
                 }
             } else {
-                Body.setPosition(leftHandBody, {x: -100, y: -100});
+                Body.setPosition(leftHandBody, { x: -100, y: -100 });
             }
 
             checkDwellNavigation();
@@ -786,13 +857,13 @@
         function checkScrubbing(px, py) {
             if (px > washingPlate.x && px < washingPlate.x + washingPlate.w &&
                 py > washingPlate.y && py < washingPlate.y + washingPlate.h) {
-                
+
                 if (lastHandPos) {
                     const dist = Math.hypot(px - lastHandPos.x, py - lastHandPos.y);
                     scrubAccumulator += dist;
-                    
+
                     washingPlate.dirtAmount = 100 - (scrubAccumulator / SCRUB_THRESHOLD) * 100;
-                    
+
                     if (washingPlate.dirtAmount <= 0) {
                         washingPlate.dirtAmount = 0;
                         updateScore(20);
@@ -808,12 +879,12 @@
             ctx.save();
             // 在 WIPE_TABLE 階段，雙手都變成綠色 (抹布) 的感覺
             const baseColor = isWipeMode ? '46, 204, 113' : (isRight ? '52, 152, 219' : '46, 204, 113');
-            
+
             // 繪製模擬手臂 (從手腕延伸至螢幕底部)
             const wrist = landmarks[0];
             const pxW = (1 - wrist.x) * GAME_WIDTH;
             const pyW = wrist.y * GAME_HEIGHT;
-            
+
             ctx.beginPath();
             ctx.moveTo(pxW - 25, pyW);
             ctx.lineTo(pxW - 50, GAME_HEIGHT + 50);
@@ -873,12 +944,12 @@
 
                 ctx.translate(pxM, pyM);
                 ctx.rotate(angle);
-                
+
                 // 畫一塊橘色/黃色的抹布海綿
                 ctx.fillStyle = 'rgba(243, 156, 18, 0.85)';
                 ctx.shadowColor = 'rgba(243, 156, 18, 1)';
                 ctx.shadowBlur = 20;
-                
+
                 ctx.beginPath();
                 if (ctx.roundRect) {
                     ctx.roundRect(-25, -40, 50, 80, 15);
@@ -886,7 +957,7 @@
                     ctx.rect(-25, -40, 50, 80);
                 }
                 ctx.fill();
-                
+
                 // 抹布上的紋理線條
                 ctx.strokeStyle = 'rgba(211, 84, 0, 0.6)';
                 ctx.lineWidth = 3;
@@ -909,7 +980,7 @@
                 ctx.textAlign = 'center';
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = 'black';
-                ctx.fillText('櫃檯區：請看著鏡頭保持微笑！', GAME_WIDTH/2, GAME_HEIGHT/2);
+                ctx.fillText('櫃檯區：請看著鏡頭保持微笑！', GAME_WIDTH / 2, GAME_HEIGHT / 2);
                 ctx.textAlign = 'left';
                 ctx.shadowBlur = 0;
                 document.getElementById('satisfaction-container').style.display = 'block';
@@ -953,7 +1024,7 @@
                     ctx.save();
                     ctx.translate(body.position.x, body.position.y);
                     ctx.rotate(body.angle);
-                    
+
                     if (body.label === 'trash_plate') {
                         ctx.beginPath();
                         ctx.arc(0, 0, 60, 0, Math.PI * 2);
@@ -981,11 +1052,11 @@
                         ctx.fillRect(-15, -10, 30, 20);
                     } else {
                         ctx.beginPath();
-                        for(let i=0; i<8; i++){
+                        for (let i = 0; i < 8; i++) {
                             let a = i * Math.PI / 4;
                             let r = 20 + Math.random() * 10;
-                            if(i===0) ctx.moveTo(r*Math.cos(a), r*Math.sin(a));
-                            else ctx.lineTo(r*Math.cos(a), r*Math.sin(a));
+                            if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+                            else ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
                         }
                         ctx.closePath();
                         ctx.fillStyle = '#ecf0f1';
@@ -1004,7 +1075,7 @@
                     ctx.fillStyle = 'white';
                     ctx.font = 'bold 48px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText('開始整理桌子！', GAME_WIDTH/2, GAME_HEIGHT/2);
+                    ctx.fillText('開始整理桌子！', GAME_WIDTH / 2, GAME_HEIGHT / 2);
                     ctx.textAlign = 'left';
                 } else if (cleaningSubState === 'TRANSITION') {
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -1012,7 +1083,7 @@
                     ctx.fillStyle = '#f1c40f';
                     ctx.font = 'bold 48px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText('垃圾清理完畢，開始擦桌子！', GAME_WIDTH/2, GAME_HEIGHT/2);
+                    ctx.fillText('垃圾清理完畢，開始擦桌子！', GAME_WIDTH / 2, GAME_HEIGHT / 2);
                     ctx.textAlign = 'left';
                 } else if (cleaningSubState === 'WIPE_TABLE' && remainingStainsCount === 0) {
                     ctx.fillStyle = '#2ecc71';
@@ -1020,7 +1091,7 @@
                     ctx.textAlign = 'center';
                     ctx.shadowBlur = 10;
                     ctx.shadowColor = 'black';
-                    ctx.fillText('✨ 完成清潔 ✨', GAME_WIDTH/2, GAME_HEIGHT/2);
+                    ctx.fillText('✨ 完成清潔 ✨', GAME_WIDTH / 2, GAME_HEIGHT / 2);
                     ctx.textAlign = 'left';
                     ctx.shadowBlur = 0;
                 } else {
@@ -1028,9 +1099,9 @@
                     ctx.font = 'bold 24px Arial';
                     ctx.textAlign = 'center';
                     if (cleaningSubState === 'CLEAR_TRASH') {
-                        ctx.fillText('將垃圾與餐具撥出桌子邊緣', GAME_WIDTH/2, GAME_HEIGHT - 20);
+                        ctx.fillText('將垃圾與餐具撥出桌子邊緣', GAME_WIDTH / 2, GAME_HEIGHT - 20);
                     } else if (cleaningSubState === 'WIPE_TABLE') {
-                        ctx.fillText('用雙手海綿擦拭桌面污漬', GAME_WIDTH/2, GAME_HEIGHT - 20);
+                        ctx.fillText('用雙手海綿擦拭桌面污漬', GAME_WIDTH / 2, GAME_HEIGHT - 20);
                     }
                     ctx.textAlign = 'left';
                 }
@@ -1040,7 +1111,7 @@
                 // 畫盤子底座
                 ctx.fillStyle = '#ecf0f1';
                 ctx.beginPath();
-                ctx.arc(washingPlate.x + washingPlate.w/2, washingPlate.y + washingPlate.h/2, 100, 0, Math.PI*2);
+                ctx.arc(washingPlate.x + washingPlate.w / 2, washingPlate.y + washingPlate.h / 2, 100, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.lineWidth = 8;
                 ctx.strokeStyle = '#bdc3c7';
@@ -1049,9 +1120,9 @@
                 if (washingPlate.dirtAmount > 0) {
                     ctx.fillStyle = `rgba(120, 100, 60, ${washingPlate.dirtAmount / 100})`;
                     ctx.beginPath();
-                    ctx.arc(washingPlate.x + washingPlate.w/2, washingPlate.y + washingPlate.h/2, 85, 0, Math.PI*2);
+                    ctx.arc(washingPlate.x + washingPlate.w / 2, washingPlate.y + washingPlate.h / 2, 85, 0, Math.PI * 2);
                     ctx.fill();
-                    
+
                     ctx.fillStyle = 'white';
                     ctx.font = 'bold 22px Arial';
                     ctx.textAlign = 'center';
@@ -1086,19 +1157,19 @@
                     key: 'COUNTER', show: microLocation !== 'COUNTER',
                     cx: 55, cy: GAME_HEIGHT / 2, label: '櫃檯',
                     labelX: 30, labelY: GAME_HEIGHT / 2 + 70,
-                    draw: () => { ctx.moveTo(30, GAME_HEIGHT/2); ctx.lineTo(80, GAME_HEIGHT/2-40); ctx.lineTo(80, GAME_HEIGHT/2+40); }
+                    draw: () => { ctx.moveTo(30, GAME_HEIGHT / 2); ctx.lineTo(80, GAME_HEIGHT / 2 - 40); ctx.lineTo(80, GAME_HEIGHT / 2 + 40); }
                 },
                 {
                     key: 'KITCHEN', show: microLocation !== 'KITCHEN',
                     cx: GAME_WIDTH / 2, cy: 55, label: '廚房',
                     labelX: GAME_WIDTH / 2 - 20, labelY: 110,
-                    draw: () => { ctx.moveTo(GAME_WIDTH/2, 30); ctx.lineTo(GAME_WIDTH/2-40, 80); ctx.lineTo(GAME_WIDTH/2+40, 80); }
+                    draw: () => { ctx.moveTo(GAME_WIDTH / 2, 30); ctx.lineTo(GAME_WIDTH / 2 - 40, 80); ctx.lineTo(GAME_WIDTH / 2 + 40, 80); }
                 },
                 {
                     key: 'DINING_ROOM', show: microLocation !== 'DINING_ROOM',
                     cx: GAME_WIDTH - 55, cy: GAME_HEIGHT / 2, label: '用餐區',
                     labelX: GAME_WIDTH - 80, labelY: GAME_HEIGHT / 2 + 70,
-                    draw: () => { ctx.moveTo(GAME_WIDTH-30, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH-80, GAME_HEIGHT/2-40); ctx.lineTo(GAME_WIDTH-80, GAME_HEIGHT/2+40); }
+                    draw: () => { ctx.moveTo(GAME_WIDTH - 30, GAME_HEIGHT / 2); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 - 40); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 + 40); }
                 }
             ];
 
@@ -1159,7 +1230,7 @@
         function updateScore(delta) {
             score += delta;
             scoreDisplay.innerText = score;
-            if(delta > 0) {
+            if (delta > 0) {
                 scoreDisplay.style.color = '#2ecc71';
             } else {
                 scoreDisplay.style.color = '#e74c3c';
@@ -1170,4 +1241,5 @@
         initMediaPipe();
     </script>
 </body>
+
 </html>
