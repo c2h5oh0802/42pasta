@@ -434,6 +434,8 @@
         let plateHasCilantro = false;
         let potNoodleState = 'EMPTY'; // 'EMPTY', 'RAW', 'BOILING', 'READY'
         let potCookProgress = 0;
+        let tipText = "";
+        let tipTimer = 0;
         
         const TABLE_POSITIONS = [
             { x: 250, y: 400 },
@@ -1009,8 +1011,8 @@
                 }
                 for (let i = customers.length - 1; i >= 0; i--) {
                     let c = customers[i];
-                    // 坐在位子上等餐 (WAITING_FOOD) 通常比站在櫃檯點餐有耐心
-                    const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.02 : 0.08;
+                    // 坐在位子上等餐 (WAITING_FOOD) 通常比站在櫃檯點餐有耐心 (大幅調慢)
+                    const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.01 : 0.04;
                     c.patience -= patienceLoss;
 
                     if (c.patience <= 0) {
@@ -1019,6 +1021,12 @@
                             activeOrder = null;
                             cookState = 'IDLE';
                             dragItem = null;
+                            // 重置盤中物與鍋子狀態，防止殘留
+                            plateHasNoodles = false;
+                            plateHasCement = false;
+                            plateHasCilantro = false;
+                            potNoodleState = 'EMPTY';
+                            potCookProgress = 0;
                         }
                         customers.splice(i, 1);
                         negativeReviews++;
@@ -1379,23 +1387,22 @@
                         }
 
                         if (servedIndex !== -1) {
-                            const c = customers[servedIndex];
-                            // 成功匹配到客人，給錢！
-                            if (c.patience > 50) {
-                                updateScore(25);
-                            } else {
-                                let mBody = Bodies.circle(300 + Math.random() * 360, 400, 30, { restitution: 0.5, label: 'money' });
-                                droppedMoney.push({ body: mBody, value: 25 });
-                            }
+                            // 成功匹配到客人，直接給錢！不再產生實體硬幣
+                            updateScore(25);
                             customers.splice(servedIndex, 1);
                         } else {
                             // 沒匹配到客人（可能等太久跑了），不給錢
-                            tipText = '❌ 找不到對應的客人需求！';
+                            showTip('❌ 找不到對應的客人需求！');
                         }
                         
                         activeOrder = null;
                         dragItem = null;
                         cookState = 'IDLE';
+                        
+                        // 重置盤子狀態，確保下一份餐點是空的
+                        plateHasNoodles = false;
+                        plateHasCement = false;
+                        plateHasCilantro = false;
 
                         // 出餐後，自動尋找下一個「已接單但尚未開始料理」的客人
                         const nextCustomer = customers.find(c => c.state === 'WAITING_FOOD');
@@ -1405,10 +1412,15 @@
                         }
                     } else {
                         // 沒盤子，提示玩家
-                        tipText = '❌ 沒有乾淨盤子了！快去洗碗！';
+                        showTip('❌ 沒有乾淨盤子了！快去洗碗！');
                     }
                 }
             }
+        }
+
+        function showTip(text) {
+            tipText = text;
+            tipTimer = 180; // 約 3 秒 (60fps)
         }
 
         function drawCookingUI() {
@@ -1423,12 +1435,16 @@
             // 標題與訂單提示
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
             ctx.font = 'bold 28px Arial';
-            let typeName = '原味義大利麵';
-            if (activeOrder.orderType === 'PASTA_CILANTRO') typeName = '香菜麵';
-            else if (activeOrder.orderType === 'PASTA_CEMENT') typeName = '混泥土麵';
-            else if (activeOrder.orderType === 'PASTA_CEMENT_CILANTRO') typeName = '混泥土香菜麵';
             
-            ctx.fillText(`當前訂單: 🍝 ${typeName}`, 20, 40);
+            if (activeOrder) {
+                let typeName = '原味義大利麵';
+                if (activeOrder.orderType === 'PASTA_CILANTRO') typeName = '香菜麵';
+                else if (activeOrder.orderType === 'PASTA_CEMENT') typeName = '混泥土麵';
+                else if (activeOrder.orderType === 'PASTA_CEMENT_CILANTRO') typeName = '混泥土香菜麵';
+                ctx.fillText(`當前訂單: 🍝 ${typeName}`, 20, 40);
+            } else {
+                ctx.fillText(`💤 等待新訂單中...`, 20, 40);
+            }
 
             // 狀態文字
             let tipText = '';
@@ -1953,9 +1969,7 @@
             }
 
             if (microLocation === 'KITCHEN') {
-                if (activeOrder) {
-                    drawCookingUI();
-                } 
+                drawCookingUI();
             } else if (microLocation === 'SINK') {
                 if (washingPlate.dirtAmount > 0) {
                     // 畫盤子底座
@@ -2126,6 +2140,17 @@
                     ctx.textAlign = 'left';
                 }
 
+                ctx.restore();
+            }
+            if (tipTimer > 0) {
+                tipTimer--;
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(GAME_WIDTH / 2 - 250, GAME_HEIGHT / 2 - 30, 500, 60);
+                ctx.fillStyle = '#f1c40f';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(tipText, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10);
                 ctx.restore();
             }
         }
