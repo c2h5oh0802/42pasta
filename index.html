@@ -401,8 +401,7 @@
         // 關卡設定
         const LEVELS = [
             { id: 1, targetMoney: 50, time: 120, tables: 2 },
-            { id: 2, targetMoney: 150, time: 90, tables: 3 },
-            { id: 3, targetMoney: 300, time: 120, tables: 4 }
+            { id: 2, targetMoney: 150, time: 90, tables: 3 }
         ];
         let currentLevelIndex = 0;
         let gameTimer = 0;
@@ -410,7 +409,7 @@
 
         // 存檔系統 (記錄每一關的最高星星數，0代表未解鎖/未過關)
         let saveMemory = {
-            stars: [0, 0, 0] // 對應 LEVEL 1, 2, 3
+            stars: [0, 0] // 對應 LEVEL 1, 2
         };
 
         const GAME_WIDTH = 960;
@@ -445,6 +444,11 @@
         let potCookProgress = 0;
         let tipText = "";
         let tipTimer = 0;
+
+        // 飲料系統 (第二關)
+        let drinkState = 'IDLE'; // IDLE, SHAKING, READY
+        let shakeProgress = 0;
+        const SHAKE_THRESHOLD = 800; // 搖晃總位移閾值
 
         const TABLE_POSITIONS = [
             { x: 250, y: 400 },
@@ -742,6 +746,10 @@
                 trashBodies.forEach(body => World.remove(world, body));
                 trashBodies = [];
             }
+            // --- 重置飲料狀態 ---
+            drinkState = 'IDLE';
+            shakeProgress = 0;
+
             stains = []; 
 
             setMicroLocation('COUNTER'); 
@@ -1050,6 +1058,12 @@
                     else if (rand < 0.66) type = 'PASTA_CEMENT';
                     else type = 'PASTA_CEMENT_CILANTRO';
 
+                    // 飲料需求判定 (僅限第二關)
+                    let wantsDrink = false;
+                    if (LEVELS[currentLevelIndex].id === 2) {
+                        wantsDrink = Math.random() < 0.6; // 60% 機率要飲料
+                    }
+
                     customers.push({
                         id: Date.now(),
                         orderType: type,
@@ -1057,8 +1071,10 @@
                         patience: 100,
                         serveDwell: 0,
                         tableIndex: -1, // 尚未入座
-                        eatTimer: 0,
-                        hasDrink: false // 預留給未來關卡
+                        wantsDrink: wantsDrink,
+                        hasPasta: false,
+                        hasDrink: false,
+                        eatTimer: 0
                     });
                     // 基礎 4 秒生一個 + 每個負評增加 1.5 秒的生成時間
                     customerSpawnTimer = 240 + (negativeReviews * 90);
@@ -1197,6 +1213,19 @@
             }
         }
 
+        function checkCustomerDone(c) {
+            const needsDrink = c.wantsDrink;
+            // 必須同時滿足麵和飲料(如果需要的話)
+            if (c.hasPasta && (!needsDrink || c.hasDrink)) {
+                c.state = 'EATING';
+                c.eatTimer = 0;
+                if (c.tableIndex !== -1) {
+                    tableStates[c.tableIndex] = 'EATING';
+                }
+                updateOrderUI(); // 立即更新，讓卡片消失
+            }
+        }
+
         function updateOrderUI() {
             if (macroState !== 'GAMEPLAY') {
                 orderContainer.innerHTML = '';
@@ -1206,15 +1235,20 @@
             // 比對當前 UI 元素數量與客人數量，避免頻繁 innerHTML 重建
             const currentCards = orderContainer.querySelectorAll('.order-card');
 
-            // 簡單處理：全量更新 (或可優化為對應更新)
+            // 僅顯示還在點餐或等餐的客人
+            const pendingCustomers = customers.filter(c => c.state === 'ORDERING' || c.state === 'WAITING_FOOD');
+            
             let html = '';
-            customers.forEach((c, index) => {
+            pendingCustomers.forEach((c, index) => {
                 const icon = '🍝';
                 let typeText = '義大利麵';
                 if (c.orderType === 'PASTA_CILANTRO') typeText = '香菜麵';
                 else if (c.orderType === 'PASTA_CEMENT') typeText = '混泥土麵';
                 else if (c.orderType === 'PASTA_CEMENT_CILANTRO') typeText = '混泥土香菜麵';
                 else typeText = '原味麵';
+
+                // 如果有飲料需求，在文字後方加上標示
+                if (c.wantsDrink) typeText += ' + 🧋';
 
                 const statusText = c.state === 'ORDERING' ? '點餐中' : '等餐中';
                 const color = c.patience > 60 ? '#27ae60' : (c.patience > 30 ? '#f39c12' : '#e74c3c');
@@ -1344,6 +1378,15 @@
                     handleCookingLogic();
                 }
             }
+
+            // 更新最後位置，供速度/位移判定使用
+            const currentHandSides = activeHandPositions.map(p => p.isRight ? 'right' : 'left');
+            if (!currentHandSides.includes('left')) lastHandPositions.left = null;
+            if (!currentHandSides.includes('right')) lastHandPositions.right = null;
+            activeHandPositions.forEach(pos => {
+                lastHandPositions[pos.isRight ? 'right' : 'left'] = { x: pos.x, y: pos.y };
+            });
+
             checkUiDwellActions();
         }
 
@@ -1363,6 +1406,47 @@
                 const cilantroArea = { x: 70, y: 100, w: 120, h: 120 };
                 const cementArea = { x: 250, y: 100, w: 120, h: 120 };
                 const serveArea = { x: 600, y: 50, w: 200, h: 100 };
+                const shakerArea = { x: 450, y: 100, w: 120, h: 120 }; // 飲料區
+
+                // --- 飲料邏輯 ---
+                if (LEVELS[currentLevelIndex].id === 2) {
+                    if (!dragItems[handSide] && px > shakerArea.x && px < shakerArea.x + shakerArea.w && py > shakerArea.y && py < shakerArea.y + shakerArea.h) {
+                        if (drinkState === 'IDLE' || drinkState === 'READY') {
+                            dragItems[handSide] = 'SHAKER';
+                            if (drinkState === 'READY') drinkState = 'READY'; // 保持
+                            else drinkState = 'SHAKING';
+                        }
+                    }
+
+                    if (dragItems[handSide] === 'SHAKER') {
+                        if (drinkState === 'SHAKING') {
+                            const lastPos = lastHandPositions[handSide];
+                            if (lastPos) {
+                                const dist = Math.hypot(px - lastPos.x, py - lastPos.y);
+                                if (dist > 5) shakeProgress += dist;
+                                if (shakeProgress >= SHAKE_THRESHOLD) {
+                                    drinkState = 'READY';
+                                }
+                            }
+                        }
+                        
+                        // 放到出餐口
+                        if (drinkState === 'READY' && px > serveArea.x && px < serveArea.x + serveArea.w && py > serveArea.y && py < serveArea.y + serveArea.h) {
+                            // 尋找需要飲料的客人
+                            const target = customers.find(c => (c.state === 'WAITING_FOOD' || c.state === 'EATING') && c.wantsDrink && !c.hasDrink);
+                            if (target) {
+                                target.hasDrink = true;
+                                dragItems[handSide] = null;
+                                drinkState = 'IDLE';
+                                shakeProgress = 0;
+                                updateScore(10);
+                                showTip('🧋 飲料已送達！');
+                                // 檢查是否完成所有需求
+                                checkCustomerDone(target);
+                            }
+                        }
+                    }
+                }
 
                 // 狀態機
                 if (cookState === 'PUT_PASTA' || cookState === 'ASSEMBLY') {
@@ -1443,24 +1527,13 @@
                             cleanPlates--; 
                             plateCountEl.innerText = cleanPlates;
 
-                            let servedIndex = -1;
-                            if (activeOrder) {
-                                for (let i = 0; i < customers.length; i++) {
-                                    if (customers[i].state === 'WAITING_FOOD' && customers[i].orderType === activeOrder.orderType) {
-                                        servedIndex = i;
-                                        break;
-                                    }
-                                }
-                            }
+                            let target = customers.find(c => c.state === 'WAITING_FOOD' && c.orderType === activeOrder.orderType && !c.hasPasta);
 
-                            if (servedIndex !== -1) {
+                            if (target) {
+                                target.hasPasta = true;
                                 updateScore(25);
-                                const c = customers[servedIndex];
-                                c.state = 'EATING';
-                                c.eatTimer = 0;
-                                if (c.tableIndex !== -1) {
-                                    tableStates[c.tableIndex] = 'EATING';
-                                }
+                                showTip('🍝 義麵已送達！');
+                                checkCustomerDone(target);
                             } else {
                                 showTip('❌ 找不到對應的客人需求！');
                             }
@@ -1470,7 +1543,7 @@
                             cookState = 'IDLE';
                             plateHasNoodles = plateHasCement = plateHasCilantro = false;
 
-                            const nextCustomer = customers.find(c => c.state === 'WAITING_FOOD');
+                            const nextCustomer = customers.find(c => c.state === 'WAITING_FOOD' && !c.hasPasta);
                             if (nextCustomer) {
                                 activeOrder = nextCustomer;
                                 cookState = 'PUT_PASTA';
@@ -1606,6 +1679,30 @@
                 ctx.stroke();
             }
 
+            // 飲料區
+            if (LEVELS[currentLevelIndex].id === 2) {
+                const shakerArea = { x: 450, y: 100, w: 120, h: 120 };
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
+                ctx.fillRect(shakerArea.x, shakerArea.y, shakerArea.w, shakerArea.h);
+                ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2;
+                ctx.strokeRect(shakerArea.x, shakerArea.y, shakerArea.w, shakerArea.h);
+                ctx.fillStyle = 'white'; ctx.font = '16px Arial';
+                ctx.fillText('高能蛋白', shakerArea.x + 30, shakerArea.y + 30);
+                
+                // 如果在原地且未被抓取
+                if (drinkState === 'IDLE') {
+                    ctx.fillStyle = '#3498db';
+                    ctx.fillRect(shakerArea.x + 40, shakerArea.y + 40, 40, 60); // 簡化搖搖杯
+                }
+
+                // 顯示搖晃進度
+                if (drinkState === 'SHAKING') {
+                    const progress = (shakeProgress / SHAKE_THRESHOLD) * 100;
+                    ctx.fillStyle = '#bdc3c7'; ctx.fillRect(shakerArea.x, shakerArea.y + shakerArea.h + 5, 120, 10);
+                    ctx.fillStyle = '#3498db'; ctx.fillRect(shakerArea.x, shakerArea.y + shakerArea.h + 5, (progress/100)*120, 10);
+                }
+            }
+
             // 出餐口
             ctx.fillStyle = 'rgba(231, 76, 60, 0.4)';
             ctx.fillRect(serveArea.x, serveArea.y, serveArea.w, serveArea.h);
@@ -1733,6 +1830,13 @@
                     } else if (heldItem === 'FINISHED_PLATE') {
                         ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
                         ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+                    } else if (heldItem === 'SHAKER') {
+                        ctx.fillStyle = drinkState === 'READY' ? '#2ecc71' : '#3498db';
+                        ctx.fillRect(-20, -30, 40, 60);
+                        if (drinkState === 'SHAKING') {
+                            ctx.fillStyle = 'white'; ctx.font = 'bold 14px Arial';
+                            ctx.fillText('SHAKE!', -25, -40);
+                        }
                     }
                     ctx.restore();
                 }
