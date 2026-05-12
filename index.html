@@ -114,17 +114,47 @@
         }
 
         /* 標題畫面 */
-        #title-screen h1 {
-            font-size: 64px;
-            color: #f1c40f;
-            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
-            margin-bottom: 10px;
+        #title-screen {
+            overflow: hidden;
         }
 
-        #title-screen p {
+        #title-door-image {
+            display: none;
+        }
+
+        #title-close-target {
+            position: absolute;
+            left: 43%;
+            top: 39%;
+            width: 16%;
+            height: 15%;
+            z-index: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        #title-close-target.hand-hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        #title-hint {
+            position: absolute;
+            left: 50%;
+            bottom: 8%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 12px 22px;
+            color: #fff7d6;
+            background: rgba(38, 24, 14, 0.62);
+            border: 1px solid rgba(255, 230, 160, 0.5);
+            border-radius: 8px;
             font-size: 24px;
-            color: #ccc;
-            margin-bottom: 40px;
+            font-weight: 700;
+            letter-spacing: 0;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
         }
 
         /* 關卡選擇畫面 */
@@ -344,9 +374,9 @@
 
         <!-- 標題畫面 (TITLE) -->
         <div id="title-screen" class="panel-overlay hidden">
-            <h1>42號義麵店</h1>
-            <p>雙手與微笑，是最好的調味料</p>
-            <button class="btn" onclick="changeMacroState('LEVEL_SELECT')">開始營業</button>
+            <img id="title-door-image" src="assets/img/bg/標題關門.png" alt="42號義麵店關門標題">
+            <div id="title-close-target" onclick="openTitleDoor()" aria-label="CLOSE 掛牌"></div>
+            <div id="title-hint">把手放到 CLOSE 掛牌上，準備開店</div>
         </div>
 
         <!-- 關卡選擇畫面 (LEVEL_SELECT) -->
@@ -426,6 +456,7 @@
         let activeOrder = null; // 目前正在處理的訂單
         let cookState = 'IDLE'; // IDLE, PUT_PASTA, BOILING, PLATE_PASTA, ADD_CEMENT, ADD_CILANTRO, STIRRING, SERVE
         let dragItems = { left: null, right: null }; // 支援雙手抓取不同物品
+        let handOpenUntil = { left: 0, right: 0 };
         let cookProgress = 0;
         let stirProgress = 0;
         const STIR_THRESHOLD = 1200; // 攪拌閾值
@@ -524,9 +555,14 @@
 
         // UI 畫面元素
         const titleScreen = document.getElementById('title-screen');
+        const titleDoorImage = document.getElementById('title-door-image');
+        const titleCloseTarget = document.getElementById('title-close-target');
+        const titleHint = document.getElementById('title-hint');
         const levelSelectScreen = document.getElementById('level-select-screen');
         const resultScreen = document.getElementById('result-screen');
         const levelGrid = document.getElementById('level-grid-container');
+        let isTitleDoorOpening = false;
+        let titleDoorTimer = null;
 
         // 背景圖片資源
         const counterBgImg = new Image();
@@ -541,6 +577,10 @@
             img.src = src;
             return img;
         });
+        const openHandImg = new Image();
+        openHandImg.src = 'assets/img/Picture/張開手.png';
+        const fistHandImg = new Image();
+        fistHandImg.src = 'assets/img/Picture/握起來.png';
 
         function drawCustomerImage(customer, x, y, width, height, fallbackColor = '#3498db') {
             const img = customerImages[customer.customerImageIndex % customerImages.length];
@@ -559,19 +599,41 @@
             ctx.fillRect(x - width * 0.22, y, width * 0.44, height * 0.42);
         }
 
+        function isItemHeld(itemName) {
+            return dragItems.left === itemName || dragItems.right === itemName;
+        }
+
+        function drawCoverImage(img, x, y, width, height) {
+            const scale = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+            const drawWidth = img.naturalWidth * scale;
+            const drawHeight = img.naturalHeight * scale;
+            ctx.drawImage(img, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+        }
+
+        function distance2D(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        function isFistGesture(landmarks) {
+            const palmCenter = landmarks[9];
+            const fingers = [
+                { tip: 8, pip: 6 },
+                { tip: 12, pip: 10 },
+                { tip: 16, pip: 14 },
+                { tip: 20, pip: 18 }
+            ];
+            const curledCount = fingers.reduce((count, finger) => {
+                const tipDistance = distance2D(landmarks[finger.tip], palmCenter);
+                const pipDistance = distance2D(landmarks[finger.pip], palmCenter);
+                return count + (tipDistance < pipDistance * 1.15 ? 1 : 0);
+            }, 0);
+
+            return curledCount >= 3;
+        }
+
         let faceLandmarker, handLandmarker;
         let lastVideoTime = -1;
         let faceResult = null, handResult = null;
-
-        // 手部骨架連接對應表
-        const HAND_CONNECTIONS = [
-            [0, 1], [1, 2], [2, 3], [3, 4],
-            [0, 5], [5, 6], [6, 7], [7, 8],
-            [5, 9], [9, 10], [10, 11], [11, 12],
-            [9, 13], [13, 14], [14, 15], [15, 16],
-            [13, 17], [17, 18], [18, 19], [19, 20],
-            [0, 17]
-        ];
 
         async function initMediaPipe() {
             const vision = await FilesetResolver.forVisionTasks(
@@ -631,9 +693,28 @@
             localStorage.setItem('42PastaSave', JSON.stringify(saveMemory));
         }
 
+        window.openTitleDoor = function () {
+            if (isTitleDoorOpening || macroState !== 'TITLE') return;
+            isTitleDoorOpening = true;
+            titleDoorImage.src = 'assets/img/bg/標題開門.png';
+            if (titleHint) titleHint.classList.add('hidden');
+            if (titleCloseTarget) titleCloseTarget.classList.remove('hand-hover');
+            registeredUiElements = [];
+            uiHoverTarget = null;
+            uiDwellProgress = 0;
+            titleDoorTimer = setTimeout(() => {
+                titleDoorTimer = null;
+                changeMacroState('LEVEL_SELECT');
+            }, 1000);
+        };
+
         // --- 宏觀狀態切換 ---
         window.changeMacroState = function (newState) {
             macroState = newState;
+            if (titleDoorTimer && newState !== 'TITLE') {
+                clearTimeout(titleDoorTimer);
+                titleDoorTimer = null;
+            }
             // 隱藏所有面板
             titleScreen.classList.add('hidden');
             levelSelectScreen.classList.add('hidden');
@@ -642,6 +723,9 @@
             orderContainer.innerHTML = ''; // 每次切換狀態都先清空訂單卡片，避免殘留到結算畫面
 
             if (newState === 'TITLE') {
+                isTitleDoorOpening = false;
+                titleDoorImage.src = 'assets/img/bg/標題關門.png';
+                if (titleHint) titleHint.classList.remove('hidden');
                 titleScreen.classList.remove('hidden');
                 plateDisplay.style.display = 'none';
                 orderContainer.innerHTML = '';
@@ -696,11 +780,10 @@
         function updateUiTargets() {
             registeredUiElements = [];
             if (macroState === 'TITLE') {
-                const startBtn = titleScreen.querySelector('.btn');
-                if (startBtn) {
+                if (titleCloseTarget && !isTitleDoorOpening) {
                     registeredUiElements.push({
-                        el: startBtn,
-                        action: () => startBtn.click()
+                        el: titleCloseTarget,
+                        action: () => openTitleDoor()
                     });
                 }
             } else if (macroState === 'LEVEL_SELECT') {
@@ -768,6 +851,7 @@
             activeOrder = null;
             cookState = 'IDLE';
             dragItems = { left: null, right: null };
+            handOpenUntil = { left: 0, right: 0 };
             plateHasNoodles = plateHasCement = plateHasCilantro = false;
             potNoodleState = 'EMPTY';
             potCookProgress = 0;
@@ -1126,6 +1210,7 @@
                         if (activeOrder && activeOrder.id === c.id) {
                             activeOrder = null; cookState = 'IDLE'; 
                             dragItems.left = dragItems.right = null;
+                            handOpenUntil = { left: 0, right: 0 };
                             plateHasNoodles = plateHasCement = plateHasCilantro = false;
                             potNoodleState = 'EMPTY'; potCookProgress = 0;
                         }
@@ -1181,6 +1266,10 @@
             ctx.fillStyle = macroState === 'GAMEPLAY' ? 'rgba(10, 15, 20, 0.75)' : 'rgba(10, 15, 20, 0.85)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             ctx.restore();
+
+            if (macroState === 'TITLE' && titleDoorImage.complete && titleDoorImage.naturalWidth > 0) {
+                drawCoverImage(titleDoorImage, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+            }
 
             handleHandLogic(); // 執行手勢邏輯 (UI判定、物理座標等)
 
@@ -1326,7 +1415,7 @@
                 const palm = landmarks[9];
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
-                activeHandPositions.push({ x: px, y: py, isRight: true });
+                activeHandPositions.push({ x: px, y: py, isRight: true, isFist: isFistGesture(landmarks) });
 
                 if (macroState === 'GAMEPLAY') {
                     if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
@@ -1346,7 +1435,7 @@
                 const palm = landmarks[9];
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
-                activeHandPositions.push({ x: px, y: py, isRight: false });
+                activeHandPositions.push({ x: px, y: py, isRight: false, isFist: isFistGesture(landmarks) });
 
                 if (macroState === 'GAMEPLAY') {
                     if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
@@ -1434,6 +1523,7 @@
                 const px = pos.x;
                 const py = pos.y;
                 const handSide = pos.isRight ? 'right' : 'left';
+                const isFist = pos.isFist;
 
                 // 定義感應區
                 const rawPastaArea = { x: 70, y: 350, w: 120, h: 120 };
@@ -1490,11 +1580,12 @@
                     if (potNoodleState === 'EMPTY') {
                         // 增加排他性檢查：如果另一隻手已經拿了生麵，則此手不能再拿 (防止分身 BUG)
                         const otherHandSide = handSide === 'right' ? 'left' : 'right';
-                        if (!dragItems[handSide] && dragItems[otherHandSide] !== 'RAW_PASTA' && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
+                        if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'RAW_PASTA' && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
                             dragItems[handSide] = 'RAW_PASTA';
                         }
                         if (dragItems[handSide] === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
                             dragItems[handSide] = null;
+                            handOpenUntil[handSide] = Date.now() + 450;
                             potNoodleState = 'BOILING';
                             potCookProgress = 0;
                         }
@@ -1505,7 +1596,7 @@
                         }
                     } else if (potNoodleState === 'READY') {
                         const otherHandSide = handSide === 'right' ? 'left' : 'right';
-                        if (!dragItems[handSide] && dragItems[otherHandSide] !== 'COOKED_PASTA' && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
+                        if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'COOKED_PASTA' && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
                             dragItems[handSide] = 'COOKED_PASTA';
                             potNoodleState = 'EMPTY';
                         }
@@ -1513,7 +1604,7 @@
 
                     // --- 盤子配料邏輯 ---
                     const otherHandSide = handSide === 'right' ? 'left' : 'right';
-                    if (!dragItems[handSide] && dragItems[otherHandSide] !== 'CEMENT' && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
+                    if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'CEMENT' && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
                         dragItems[handSide] = 'CEMENT';
                     }
                     if (!dragItems[handSide] && dragItems[otherHandSide] !== 'CILANTRO' && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
@@ -1526,6 +1617,7 @@
                             if (dragItems[handSide] === 'CEMENT') plateHasCement = true;
                             if (dragItems[handSide] === 'CILANTRO') plateHasCilantro = true;
                             dragItems[handSide] = null;
+                            handOpenUntil[handSide] = Date.now() + 450;
                         } else {
                             showTip('❌ 沒有乾淨盤子了！快去洗碗！');
                         }
@@ -1634,11 +1726,11 @@
             // 狀態文字
             let tipTextStr = '';
             if (cleanPlates === 0 && !plateHasNoodles) tipTextStr = '❌ 盤子用完了，請先去洗碗！';
-            else if (cookState === 'PUT_PASTA') tipTextStr = '1. 抓一把麵放到鍋子裡';
+            else if (cookState === 'PUT_PASTA') tipTextStr = '1. 握拳拿麵放到鍋子裡';
             else if (cookState === 'BOILING') tipTextStr = '2. 煮麵中...';
-            else if (cookState === 'PLATE_PASTA') tipTextStr = '3. 把熟麵抓起放到盤子上';
-            else if (cookState === 'ADD_CEMENT') tipTextStr = '4. 依照需求加入混泥土';
-            else if (cookState === 'ADD_CILANTRO') tipTextStr = '5. 依照需求加入香菜';
+            else if (cookState === 'PLATE_PASTA') tipTextStr = '3. 握拳把熟麵放到盤子上';
+            else if (cookState === 'ADD_CEMENT') tipTextStr = '4. 依照需求握拳加入混泥土';
+            else if (cookState === 'ADD_CILANTRO') tipTextStr = '5. 依照需求抓一把香菜';
             else if (cookState === 'STIRRING') tipTextStr = '6. 在盤子上畫圈攪拌！';
             else if (cookState === 'SERVE') tipTextStr = '7. 把盤子放到上方出餐口！';
             ctx.fillStyle = '#f1c40f';
@@ -1648,20 +1740,48 @@
             // 畫生麵區
             ctx.fillStyle = 'rgba(241, 196, 15, 0.5)';
             ctx.fillRect(rawPastaArea.x, rawPastaArea.y, rawPastaArea.w, rawPastaArea.h);
-            ctx.fillStyle = 'white'; ctx.font = '20px Arial';
-            ctx.fillText('生麵', rawPastaArea.x + 40, rawPastaArea.y + 70);
+            if (!isItemHeld('RAW_PASTA')) {
+                ctx.fillStyle = '#f7dc6f';
+                ctx.fillRect(rawPastaArea.x + 28, rawPastaArea.y + 28, 64, 72);
+                ctx.strokeStyle = '#d4ac0d';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(rawPastaArea.x + 28, rawPastaArea.y + 28, 64, 72);
+                ctx.fillStyle = '#8e5a12';
+                ctx.font = 'bold 18px Arial';
+                ctx.fillText('意麵', rawPastaArea.x + 42, rawPastaArea.y + 68);
+            }
 
             // 畫香菜區
             ctx.fillStyle = 'rgba(46, 204, 113, 0.5)';
             ctx.fillRect(cilantroArea.x, cilantroArea.y, cilantroArea.w, cilantroArea.h);
+            ctx.fillStyle = '#7f4f24';
+            ctx.beginPath(); ctx.ellipse(cilantroArea.x + 60, cilantroArea.y + 82, 42, 22, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#2ecc71';
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                const lx = cilantroArea.x + 60 + Math.cos(angle) * 26;
+                const ly = cilantroArea.y + 55 + Math.sin(angle) * 18;
+                ctx.beginPath();
+                ctx.ellipse(lx, ly, 9, 15, angle, 0, Math.PI * 2);
+                ctx.fill();
+            }
             ctx.fillStyle = 'white';
-            ctx.fillText('香菜', cilantroArea.x + 40, cilantroArea.y + 65);
+            ctx.font = '20px Arial';
+            ctx.fillText('香菜盆', cilantroArea.x + 30, cilantroArea.y + 112);
 
             // 畫混泥土區
             ctx.fillStyle = 'rgba(149, 165, 166, 0.6)';
             ctx.fillRect(cementArea.x, cementArea.y, cementArea.w, cementArea.h);
-            ctx.fillStyle = 'white';
-            ctx.fillText('混泥土', cementArea.x + 30, cementArea.y + 65);
+            if (!isItemHeld('CEMENT')) {
+                ctx.fillStyle = '#bdc3c7';
+                ctx.fillRect(cementArea.x + 42, cementArea.y + 24, 38, 72);
+                ctx.fillStyle = '#95a5a6';
+                ctx.beginPath(); ctx.ellipse(cementArea.x + 61, cementArea.y + 24, 19, 8, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(cementArea.x + 61, cementArea.y + 96, 19, 8, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#34495e';
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText('混泥土', cementArea.x + 39, cementArea.y + 64);
+            }
 
             // 畫鍋子
             ctx.fillStyle = '#34495e';
@@ -1789,131 +1909,105 @@
 
         function drawFirstPersonHand(landmarks, isRight, isWipeMode) {
             ctx.save();
-            // 在 WIPE_TABLE 階段，雙手都變成綠色 (抹布) 的感覺
-            const baseColor = isWipeMode ? '46, 204, 113' : (isRight ? '52, 152, 219' : '46, 204, 113');
-
-            // 繪製模擬手臂 (從手腕延伸至螢幕底部)
             const wrist = landmarks[0];
+            const middleMCP = landmarks[9];
+            const indexMCP = landmarks[5];
+            const pinkyMCP = landmarks[17];
             const pxW = (1 - wrist.x) * GAME_WIDTH;
             const pyW = wrist.y * GAME_HEIGHT;
+            const pxM = (1 - middleMCP.x) * GAME_WIDTH;
+            const pyM = middleMCP.y * GAME_HEIGHT;
+            const pxIndex = (1 - indexMCP.x) * GAME_WIDTH;
+            const pyIndex = indexMCP.y * GAME_HEIGHT;
+            const pxPinky = (1 - pinkyMCP.x) * GAME_WIDTH;
+            const pyPinky = pinkyMCP.y * GAME_HEIGHT;
+            const handSide = isRight ? 'right' : 'left';
+            const heldItem = dragItems[handSide];
+            const gripHeldItems = ['RAW_PASTA', 'COOKED_PASTA', 'CEMENT'];
+            const forceOpen = Date.now() < handOpenUntil[handSide];
+            const isFist = !forceOpen && (isFistGesture(landmarks) || gripHeldItems.includes(heldItem));
+            const handImg = isFist ? fistHandImg : openHandImg;
+            const handDirection = Math.atan2(pyM - pyW, pxM - pxW);
+            const rotation = handDirection + Math.PI / 2;
+            const palmSpan = Math.hypot(pxIndex - pxPinky, pyIndex - pyPinky);
+            const palmLength = Math.hypot(pxM - pxW, pyM - pyW);
+            const handHeight = Math.max(120, Math.min(255, Math.max(palmSpan * 2.7, palmLength * 4.0)));
+            const handWidth = handImg.naturalWidth > 0 ? handHeight * (handImg.naturalWidth / handImg.naturalHeight) : handHeight * 0.9;
 
-            ctx.beginPath();
-            ctx.moveTo(pxW - 25, pyW);
-            ctx.lineTo(pxW - 50, GAME_HEIGHT + 50);
-            ctx.lineTo(pxW + 50, GAME_HEIGHT + 50);
-            ctx.lineTo(pxW + 25, pyW);
-            const armGrad = ctx.createLinearGradient(pxW, pyW, pxW, GAME_HEIGHT);
-            armGrad.addColorStop(0, `rgba(${baseColor}, 0.5)`);
-            armGrad.addColorStop(1, `rgba(${baseColor}, 0.0)`);
-            ctx.fillStyle = armGrad;
-            ctx.fill();
-
-            // 繪製骨架發光特效
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = `rgb(${baseColor})`;
-            ctx.strokeStyle = `rgba(${baseColor}, 0.9)`;
-            ctx.lineWidth = 6;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            // 畫骨架連線
-            ctx.beginPath();
-            HAND_CONNECTIONS.forEach(pair => {
-                const p1 = landmarks[pair[0]];
-                const p2 = landmarks[pair[1]];
-                ctx.moveTo((1 - p1.x) * GAME_WIDTH, p1.y * GAME_HEIGHT);
-                ctx.lineTo((1 - p2.x) * GAME_WIDTH, p2.y * GAME_HEIGHT);
-            });
-            ctx.stroke();
-
-            // 畫關節點
-            ctx.fillStyle = '#fff';
-            ctx.shadowBlur = 5;
-            landmarks.forEach(point => {
-                ctx.beginPath();
-                ctx.arc((1 - point.x) * GAME_WIDTH, point.y * GAME_HEIGHT, 4, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            if (!isWipeMode) {
-                const middleMCP = landmarks[9];
-                const pxM = (1 - middleMCP.x) * GAME_WIDTH;
-                const pyM = middleMCP.y * GAME_HEIGHT;
-                
-                // 畫手心光圈
+            if (handImg.complete && handImg.naturalWidth > 0) {
+                ctx.save();
+                ctx.translate(pxM, pyM);
+                ctx.rotate(rotation);
+                if ((isFist && !isRight) || (!isFist && isRight)) ctx.scale(-1, 1);
+                ctx.shadowBlur = isWipeMode ? 16 : 10;
+                ctx.shadowColor = isWipeMode ? 'rgba(243, 156, 18, 0.9)' : 'rgba(255, 255, 255, 0.45)';
+                ctx.drawImage(handImg, -handWidth / 2, -handHeight * 0.42, handWidth, handHeight);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = isFist ? '#f39c12' : '#ffffff';
                 ctx.beginPath();
                 ctx.arc(pxM, pyM, 35, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(${baseColor}, 0.3)`;
                 ctx.fill();
-                ctx.strokeStyle = `rgba(${baseColor}, 0.8)`;
-                ctx.lineWidth = 2;
-                ctx.stroke();
+            }
 
-                // 繪製手上持有的物品
-                const handSide = isRight ? 'right' : 'left';
-                const heldItem = dragItems[handSide];
-                if (heldItem) {
-                    ctx.save();
-                    ctx.translate(pxM, pyM);
-                    if (heldItem === 'RAW_PASTA') {
-                        ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
-                    } else if (heldItem === 'COOKED_PASTA') {
-                        ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
-                    } else if (heldItem === 'CILANTRO') {
-                        ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill();
-                    } else if (heldItem === 'CEMENT') {
-                        ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.fill();
-                    } else if (heldItem === 'FINISHED_PLATE') {
-                        ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
-                        ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
-                    } else if (heldItem === 'SHAKER') {
-                        ctx.fillStyle = drinkState === 'READY' ? '#2ecc71' : '#3498db';
-                        ctx.fillRect(-20, -30, 40, 60);
-                        if (drinkState === 'SHAKING') {
-                            ctx.fillStyle = 'white'; ctx.font = 'bold 14px Arial';
-                            ctx.fillText('SHAKE!', -25, -40);
-                        }
-                    }
-                    ctx.restore();
-                }
-            } else {
-                // 擦桌子模式：雙手都有抹布
-                const middleMCP = landmarks[9];
-                const pxM = (1 - middleMCP.x) * GAME_WIDTH;
-                const pyM = middleMCP.y * GAME_HEIGHT;
-                const angle = Math.atan2(pyM - pyW, pxM - pxW);
-
+            // 繪製手上持有的物品
+            if (!isWipeMode && heldItem) {
+                ctx.save();
                 ctx.translate(pxM, pyM);
-                ctx.rotate(angle);
-
-                // 畫一塊橘色/黃色的抹布海綿
-                ctx.fillStyle = 'rgba(243, 156, 18, 0.85)';
-                ctx.shadowColor = 'rgba(243, 156, 18, 1)';
-                ctx.shadowBlur = 20;
-
-                ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(-25, -40, 50, 80, 15);
-                } else {
-                    ctx.rect(-25, -40, 50, 80);
+                if (heldItem === 'RAW_PASTA') {
+                    ctx.fillStyle = '#f7dc6f';
+                    ctx.fillRect(-28, -36, 56, 72);
+                    ctx.strokeStyle = '#d4ac0d';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(-28, -36, 56, 72);
+                    ctx.fillStyle = '#8e5a12';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('意麵', 0, 6);
+                } else if (heldItem === 'COOKED_PASTA') {
+                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+                } else if (heldItem === 'CILANTRO') {
+                    ctx.fillStyle = '#2ecc71';
+                    for (let i = 0; i < 7; i++) {
+                        const angle = (Math.PI * 2 / 7) * i;
+                        const lx = Math.cos(angle) * 12;
+                        const ly = Math.sin(angle) * 8;
+                        ctx.beginPath();
+                        ctx.ellipse(lx, ly, 7, 13, angle, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.strokeStyle = '#27ae60';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-14, 16); ctx.lineTo(10, -12);
+                    ctx.moveTo(-4, 18); ctx.lineTo(16, -4);
+                    ctx.stroke();
+                } else if (heldItem === 'CEMENT') {
+                    ctx.fillStyle = '#bdc3c7';
+                    ctx.fillRect(-20, -34, 40, 68);
+                    ctx.fillStyle = '#95a5a6';
+                    ctx.beginPath(); ctx.ellipse(0, -34, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(0, 34, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#34495e';
+                    ctx.font = 'bold 13px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('混泥土', 0, 4);
+                } else if (heldItem === 'FINISHED_PLATE') {
+                    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+                } else if (heldItem === 'SHAKER') {
+                    ctx.fillStyle = drinkState === 'READY' ? '#2ecc71' : '#3498db';
+                    ctx.fillRect(-20, -30, 40, 60);
+                    if (drinkState === 'SHAKING') {
+                        ctx.fillStyle = 'white'; ctx.font = 'bold 14px Arial';
+                        ctx.fillText('SHAKE!', -25, -40);
+                    }
                 }
-                ctx.fill();
-
-                // 抹布上的紋理線條
-                ctx.strokeStyle = 'rgba(211, 84, 0, 0.6)';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(-10, -20); ctx.lineTo(-10, 20);
-                ctx.moveTo(10, -20); ctx.lineTo(10, 20);
-                ctx.stroke();
+                ctx.restore();
             }
 
             // --- 繪製 UI 滯留進度環 ---
             if (macroState !== 'GAMEPLAY' && uiDwellProgress > 0) {
-                const middleMCP = landmarks[9];
-                const pxM = (1 - middleMCP.x) * GAME_WIDTH;
-                const pyM = middleMCP.y * GAME_HEIGHT;
-
                 const r = 45;
                 ctx.beginPath();
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
