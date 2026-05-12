@@ -423,7 +423,7 @@
         // 廚房料理系統
         let activeOrder = null; // 目前正在處理的訂單
         let cookState = 'IDLE'; // IDLE, PUT_PASTA, BOILING, PLATE_PASTA, ADD_CEMENT, ADD_CILANTRO, STIRRING, SERVE
-        let dragItem = null; // 當前手上抓取的物品: 'RAW_PASTA', 'COOKED_PASTA', 'CEMENT', 'CILANTRO', 'FINISHED_PLATE'
+        let dragItems = { left: null, right: null }; // 支援雙手抓取不同物品
         let cookProgress = 0;
         let stirProgress = 0;
         const STIR_THRESHOLD = 1200; // 攪拌閾值
@@ -830,6 +830,15 @@
                 
                 trashBodies.push(...bodies);
                 World.add(world, bodies);
+
+                // 初始化精準擦拭的髒污點
+                stains = [
+                    { x: 300, y: 250, cleaned: false, size: 60 },
+                    { x: 600, y: 350, cleaned: false, size: 50 },
+                    { x: 480, y: 300, cleaned: false, size: 55 },
+                    { x: 250, y: 380, cleaned: false, size: 45 },
+                    { x: 700, y: 220, cleaned: false, size: 40 }
+                ];
             }
         };
 
@@ -1039,7 +1048,8 @@
                     if (c.patience <= 0) {
                         // ... (之前已有的耐心耗盡邏輯)
                         if (activeOrder && activeOrder.id === c.id) {
-                            activeOrder = null; cookState = 'IDLE'; dragItem = null;
+                            activeOrder = null; cookState = 'IDLE'; 
+                            dragItems.left = dragItems.right = null;
                             plateHasNoodles = plateHasCement = plateHasCilantro = false;
                             potNoodleState = 'EMPTY'; potCookProgress = 0;
                         }
@@ -1263,16 +1273,26 @@
                     // 特寫擦拭邏輯 (雙手皆可觸發)
                     if (cleaningSubState === 'WIPE_TABLE' && currentCleaningTable !== -1) {
                         activeHandPositions.forEach(pos => {
-                            // 特寫畫面中央就是桌子
-                            const dist = Math.hypot(pos.x - 480, pos.y - 300);
-                            if (dist < 200) {
-                                tableCleanProgress[currentCleaningTable] += 0.8; // 稍微調整擦拭速度平衡
-                                if (tableCleanProgress[currentCleaningTable] >= 100) {
-                                    tableStates[currentCleaningTable] = 'FREE';
-                                    tableCleanProgress[currentCleaningTable] = 0;
-                                    showTip('✨ 桌面已清理乾淨！');
-                                    setTimeout(() => { setMicroLocation('DINING_ROOM'); }, 800);
+                            // 檢查是否碰到任何尚未清理的髒污
+                            stains.forEach(stain => {
+                                if (!stain.cleaned) {
+                                    const dist = Math.hypot(pos.x - stain.x, pos.y - stain.y);
+                                    if (dist < stain.size) {
+                                        stain.cleaned = true;
+                                        showTip('🧹 擦掉髒污！');
+                                    }
                                 }
+                            });
+
+                            // 根據已清理的髒污比例更新總進度
+                            const cleanedCount = stains.filter(s => s.cleaned).length;
+                            tableCleanProgress[currentCleaningTable] = (cleanedCount / stains.length) * 100;
+
+                            if (tableCleanProgress[currentCleaningTable] >= 100) {
+                                tableStates[currentCleaningTable] = 'FREE';
+                                tableCleanProgress[currentCleaningTable] = 0;
+                                showTip('✨ 桌面已清理乾淨！');
+                                setTimeout(() => { setMicroLocation('DINING_ROOM'); }, 800);
                             }
                         });
                     }
@@ -1322,11 +1342,11 @@
                 if (cookState === 'PUT_PASTA' || cookState === 'ASSEMBLY') {
                     // --- 鍋子邏輯 ---
                     if (potNoodleState === 'EMPTY') {
-                        if (!dragItem && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
-                            dragItem = 'RAW_PASTA';
+                        if (!dragItems[handSide] && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
+                            dragItems[handSide] = 'RAW_PASTA';
                         }
-                        if (dragItem === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
-                            dragItem = null;
+                        if (dragItems[handSide] === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
+                            dragItems[handSide] = null;
                             potNoodleState = 'BOILING';
                             potCookProgress = 0;
                         }
@@ -1336,26 +1356,26 @@
                             potNoodleState = 'READY';
                         }
                     } else if (potNoodleState === 'READY') {
-                        if (!dragItem && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
-                            dragItem = 'COOKED_PASTA';
+                        if (!dragItems[handSide] && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
+                            dragItems[handSide] = 'COOKED_PASTA';
                             potNoodleState = 'EMPTY';
                         }
                     }
 
                     // --- 盤子配料邏輯 ---
-                    if (!dragItem && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
-                        dragItem = 'CEMENT';
+                    if (!dragItems[handSide] && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
+                        dragItems[handSide] = 'CEMENT';
                     }
-                    if (!dragItem && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
-                        dragItem = 'CILANTRO';
+                    if (!dragItems[handSide] && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
+                        dragItems[handSide] = 'CILANTRO';
                     }
 
-                    if (dragItem && (dragItem === 'COOKED_PASTA' || dragItem === 'CEMENT' || dragItem === 'CILANTRO') && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
+                    if (dragItems[handSide] && (dragItems[handSide] === 'COOKED_PASTA' || dragItems[handSide] === 'CEMENT' || dragItems[handSide] === 'CILANTRO') && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
                         if (cleanPlates > 0 || plateHasNoodles || plateHasCement || plateHasCilantro) {
-                            if (dragItem === 'COOKED_PASTA') plateHasNoodles = true;
-                            if (dragItem === 'CEMENT') plateHasCement = true;
-                            if (dragItem === 'CILANTRO') plateHasCilantro = true;
-                            dragItem = null;
+                            if (dragItems[handSide] === 'COOKED_PASTA') plateHasNoodles = true;
+                            if (dragItems[handSide] === 'CEMENT') plateHasCement = true;
+                            if (dragItems[handSide] === 'CILANTRO') plateHasCilantro = true;
+                            dragItems[handSide] = null;
                         } else {
                             showTip('❌ 沒有乾淨盤子了！快去洗碗！');
                         }
@@ -1376,7 +1396,7 @@
                             stirProgress += dist;
                             if (stirProgress > STIR_THRESHOLD) {
                                 cookState = 'SERVE';
-                                dragItem = null;
+                                dragItems[handSide] = null;
                             }
                         }
                         lastHandPositions[handSide] = { x: px, y: py };
@@ -1384,10 +1404,10 @@
                         lastHandPositions[handSide] = null;
                     }
                 } else if (cookState === 'SERVE') {
-                    if (!dragItem && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
-                        dragItem = 'FINISHED_PLATE';
+                    if (!dragItems[handSide] && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
+                        dragItems[handSide] = 'FINISHED_PLATE';
                     }
-                    if (dragItem === 'FINISHED_PLATE' && px > serveArea.x && px < serveArea.x + serveArea.w && py > serveArea.y && py < serveArea.y + serveArea.h) {
+                    if (dragItems[handSide] === 'FINISHED_PLATE' && px > serveArea.x && px < serveArea.x + serveArea.w && py > serveArea.y && py < serveArea.y + serveArea.h) {
                         if (cleanPlates > 0) {
                             cleanPlates--; 
                             plateCountEl.innerText = cleanPlates;
@@ -1415,7 +1435,7 @@
                             }
 
                             activeOrder = null;
-                            dragItem = null;
+                            dragItems[handSide] = null;
                             cookState = 'IDLE';
                             plateHasNoodles = plateHasCement = plateHasCilantro = false;
 
@@ -1525,7 +1545,7 @@
 
             // 畫盤子 (如果手上沒拿著它，且有乾淨盤子或是盤子已有東西，就畫在桌上)
             const shouldShowPlate = (cleanPlates > 0 || plateHasNoodles || plateHasCement || plateHasCilantro);
-            if (dragItem !== 'FINISHED_PLATE' && shouldShowPlate) {
+            if (dragItems.left !== 'FINISHED_PLATE' && dragItems.right !== 'FINISHED_PLATE' && shouldShowPlate) {
                 ctx.fillStyle = 'white';
                 ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w / 2, plateArea.y + plateArea.h / 2, 60, 0, Math.PI * 2); ctx.fill();
                 ctx.lineWidth = 4; ctx.strokeStyle = '#bdc3c7'; ctx.stroke();
@@ -1563,44 +1583,11 @@
             ctx.fillStyle = 'white';
             ctx.fillText('出餐口', serveArea.x + 70, serveArea.y + 60);
 
-            // 繪製手上的物品
-            if (dragItem && activeHandPositions.length > 0) {
-                let px = activeHandPositions[0].x;
-                let py = activeHandPositions[0].y;
-                if (dragItem === 'RAW_PASTA') {
-                    ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI * 2); ctx.fill();
-                } else if (dragItem === 'COOKED_PASTA') {
-                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI * 2); ctx.fill();
-                } else if (dragItem === 'CILANTRO') {
-                    ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(px, py, 20, 0, Math.PI * 2); ctx.fill();
-                } else if (dragItem === 'CEMENT') {
-                    ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.arc(px, py, 25, 0, Math.PI * 2); ctx.fill();
-                } else if (dragItem === 'FINISHED_PLATE') {
-                    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(px, py, 40, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI * 2); ctx.fill();
-                }
-            }
+            // 移除舊的單一 dragItem 繪製，改由 drawFirstPersonHand 統一處理
 
             ctx.restore();
         }
 
-        function checkWiping(px, py, handType) {
-            stains.forEach(stain => {
-                if (stain.alpha > 0) {
-                    const dist = Math.hypot(px - stain.x, py - stain.y);
-                    if (dist < stain.r + 80) {
-                        // 根據手部移動速度來擦除
-                        const lastPos = lastHandPositions[handType];
-                        if (lastPos) {
-                            const moveDist = Math.hypot(px - lastPos.x, py - lastPos.y);
-                            stain.alpha -= moveDist * 0.005; // 擦拭速度
-                            if (stain.alpha < 0) stain.alpha = 0;
-                        }
-                    }
-                }
-            });
-            lastHandPositions[handType] = { x: px, y: py };
-        }
 
         function checkScrubbing(px, py, handType) {
             // 使用較寬鬆的判定範圍，讓玩家容易搓洗
@@ -1685,10 +1672,11 @@
             });
 
             if (!isWipeMode) {
-                // 推垃圾模式：手心光圈
                 const middleMCP = landmarks[9];
                 const pxM = (1 - middleMCP.x) * GAME_WIDTH;
                 const pyM = middleMCP.y * GAME_HEIGHT;
+                
+                // 畫手心光圈
                 ctx.beginPath();
                 ctx.arc(pxM, pyM, 35, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(${baseColor}, 0.3)`;
@@ -1696,6 +1684,27 @@
                 ctx.strokeStyle = `rgba(${baseColor}, 0.8)`;
                 ctx.lineWidth = 2;
                 ctx.stroke();
+
+                // 繪製手上持有的物品
+                const handSide = isRight ? 'right' : 'left';
+                const heldItem = dragItems[handSide];
+                if (heldItem) {
+                    ctx.save();
+                    ctx.translate(pxM, pyM);
+                    if (heldItem === 'RAW_PASTA') {
+                        ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+                    } else if (heldItem === 'COOKED_PASTA') {
+                        ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+                    } else if (heldItem === 'CILANTRO') {
+                        ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill();
+                    } else if (heldItem === 'CEMENT') {
+                        ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.fill();
+                    } else if (heldItem === 'FINISHED_PLATE') {
+                        ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+                    }
+                    ctx.restore();
+                }
             } else {
                 // 擦桌子模式：雙手都有抹布
                 const middleMCP = landmarks[9];
@@ -1904,10 +1913,13 @@
                 ctx.fillStyle = '#95a5a6'; ctx.fillRect(100, 150, 760, 300); 
                 
                 if (cleaningSubState === 'WIPE_TABLE') {
-                    // 顯示髒污特寫
-                    ctx.fillStyle = 'rgba(101, 67, 33, 0.4)';
-                    ctx.beginPath(); ctx.arc(300, 250, 60, 0, Math.PI*2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(600, 350, 50, 0, Math.PI*2); ctx.fill();
+                    // 顯示髒污特寫 (僅顯示尚未清理的部分)
+                    stains.forEach(stain => {
+                        if (!stain.cleaned) {
+                            ctx.fillStyle = 'rgba(101, 67, 33, 0.4)';
+                            ctx.beginPath(); ctx.arc(stain.x, stain.y, stain.size, 0, Math.PI*2); ctx.fill();
+                        }
+                    });
                     
                     // 清理進度條
                     const progress = tableCleanProgress[currentCleaningTable];
