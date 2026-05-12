@@ -1300,7 +1300,8 @@
                 if (microLocation === 'SINK') {
                     if (washingPlate.dirtAmount > 0) {
                         handResult.landmarks.forEach((landmarks, idx) => {
-                            const isRight = handResult.handednesses[idx][0].categoryName === 'Right';
+                            // 修正：應使用鏡像反轉邏輯，Left 標籤代表畫面右側的手
+                            const isRight = handResult.handednesses[idx][0].categoryName === 'Left';
                             const palm = landmarks[9];
                             const px = (1 - palm.x) * GAME_WIDTH;
                             const py = palm.y * GAME_HEIGHT;
@@ -1342,7 +1343,9 @@
                 if (cookState === 'PUT_PASTA' || cookState === 'ASSEMBLY') {
                     // --- 鍋子邏輯 ---
                     if (potNoodleState === 'EMPTY') {
-                        if (!dragItems[handSide] && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
+                        // 增加排他性檢查：如果另一隻手已經拿了生麵，則此手不能再拿 (防止分身 BUG)
+                        const otherHandSide = handSide === 'right' ? 'left' : 'right';
+                        if (!dragItems[handSide] && dragItems[otherHandSide] !== 'RAW_PASTA' && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
                             dragItems[handSide] = 'RAW_PASTA';
                         }
                         if (dragItems[handSide] === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
@@ -1356,17 +1359,19 @@
                             potNoodleState = 'READY';
                         }
                     } else if (potNoodleState === 'READY') {
-                        if (!dragItems[handSide] && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
+                        const otherHandSide = handSide === 'right' ? 'left' : 'right';
+                        if (!dragItems[handSide] && dragItems[otherHandSide] !== 'COOKED_PASTA' && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
                             dragItems[handSide] = 'COOKED_PASTA';
                             potNoodleState = 'EMPTY';
                         }
                     }
 
                     // --- 盤子配料邏輯 ---
-                    if (!dragItems[handSide] && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
+                    const otherHandSide = handSide === 'right' ? 'left' : 'right';
+                    if (!dragItems[handSide] && dragItems[otherHandSide] !== 'CEMENT' && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
                         dragItems[handSide] = 'CEMENT';
                     }
-                    if (!dragItems[handSide] && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
+                    if (!dragItems[handSide] && dragItems[otherHandSide] !== 'CILANTRO' && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
                         dragItems[handSide] = 'CILANTRO';
                     }
 
@@ -1404,7 +1409,8 @@
                         lastHandPositions[handSide] = null;
                     }
                 } else if (cookState === 'SERVE') {
-                    if (!dragItems[handSide] && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
+                    const otherHandSide = handSide === 'right' ? 'left' : 'right';
+                    if (!dragItems[handSide] && dragItems[otherHandSide] !== 'FINISHED_PLATE' && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
                         dragItems[handSide] = 'FINISHED_PLATE';
                     }
                     if (dragItems[handSide] === 'FINISHED_PLATE' && px > serveArea.x && px < serveArea.x + serveArea.w && py > serveArea.y && py < serveArea.y + serveArea.h) {
