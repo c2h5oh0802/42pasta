@@ -443,6 +443,8 @@
             { x: 710, y: 400 },
             { x: 480, y: 200 }
         ];
+        let tableStates = ['FREE', 'FREE', 'FREE', 'FREE']; // FREE, OCCUPIED, EATING, DIRTY
+        let tableCleanProgress = [0, 0, 0, 0]; // 每個桌子的清潔進度 (0-100)
 
         // 導航停留偵測 (Dwell Navigation)
         let hoverTarget = null;
@@ -1005,9 +1007,11 @@
                     customers.push({
                         id: Date.now(),
                         orderType: type,
-                        state: 'ORDERING', // ORDERING, WAITING_FOOD
+                        state: 'ORDERING', 
                         patience: 100,
-                        serveDwell: 0
+                        serveDwell: 0,
+                        tableIndex: -1, // 尚未入座
+                        eatTimer: 0
                     });
                     // 基礎 4 秒生一個 + 每個負評增加 1.5 秒的生成時間
                     customerSpawnTimer = 240 + (negativeReviews * 90);
@@ -1019,22 +1023,28 @@
                     c.patience -= patienceLoss;
 
                     if (c.patience <= 0) {
-                        // 如果是正在處理的訂單對象氣走了
+                        // ... (之前已有的耐心耗盡邏輯)
                         if (activeOrder && activeOrder.id === c.id) {
-                            activeOrder = null;
-                            cookState = 'IDLE';
-                            dragItem = null;
-                            // 重置盤中物與鍋子狀態，防止殘留
-                            plateHasNoodles = false;
-                            plateHasCement = false;
-                            plateHasCilantro = false;
-                            potNoodleState = 'EMPTY';
-                            potCookProgress = 0;
+                            activeOrder = null; cookState = 'IDLE'; dragItem = null;
+                            plateHasNoodles = plateHasCement = plateHasCilantro = false;
+                            potNoodleState = 'EMPTY'; potCookProgress = 0;
+                        }
+                        if (c.tableIndex !== -1) {
+                            tableStates[c.tableIndex] = 'DIRTY';
+                            tableCleanProgress[c.tableIndex] = 0;
                         }
                         customers.splice(i, 1);
-                        negativeReviews++;
-                        customerSpawnTimer += 180;
+                        negativeReviews++; customerSpawnTimer += 180;
                         updateReviews();
+                    } else if (c.state === 'EATING') {
+                        c.eatTimer++;
+                        if (c.eatTimer > 300) { // 用餐 5 秒
+                            if (c.tableIndex !== -1) {
+                                tableStates[c.tableIndex] = 'DIRTY';
+                                tableCleanProgress[c.tableIndex] = 0;
+                            }
+                            customers.splice(i, 1);
+                        }
                     }
                 }
             }
@@ -1047,7 +1057,6 @@
                         const py = body.position.y;
                         if (px < 50 || px > 910 || py < 50 || py > 550) {
                             World.remove(world, body);
-                            updateScore(5); // 賺取清理費
                             return false;
                         }
                         return true;
@@ -1109,21 +1118,32 @@
                 // 1. 微笑接單邏輯
                 const orderingCustomer = customers.find(c => c.state === 'ORDERING');
                 if (orderingCustomer) {
-                    if (isSmiling) {
-                        orderingCustomer.serveDwell += 0.03; // 微笑接單速度
-                        if (orderingCustomer.serveDwell >= 1) {
-                            orderingCustomer.state = 'WAITING_FOOD';
-                            orderingCustomer.serveDwell = 0;
-                            orderingCustomer.patience = Math.min(100, orderingCustomer.patience + 25);
-                            
-                            if (!activeOrder) {
-                                activeOrder = orderingCustomer;
-                                cookState = 'PUT_PASTA';
-                            }
-                            showTip('😊 收到訂單囉！');
-                        }
+                    // 檢查是否有空桌子 (FREE 狀態且在當前關卡桌數範圍內)
+                    const freeTableIndex = tableStates.findIndex((s, idx) => s === 'FREE' && idx < LEVELS[currentLevelIndex].tables);
+
+                    if (freeTableIndex === -1) {
+                        // 沒空桌時，微笑會給予提示
+                        if (isSmiling) showTip('⚠️ 沒有空桌子了！請先往用餐區清理桌面 ⚠️');
+                        orderingCustomer.serveDwell = 0;
                     } else {
-                        orderingCustomer.serveDwell = Math.max(0, orderingCustomer.serveDwell - 0.01);
+                        if (isSmiling) {
+                            orderingCustomer.serveDwell += 0.03; 
+                            if (orderingCustomer.serveDwell >= 1) {
+                                orderingCustomer.state = 'WAITING_FOOD';
+                                orderingCustomer.tableIndex = freeTableIndex;
+                                tableStates[freeTableIndex] = 'OCCUPIED';
+                                orderingCustomer.serveDwell = 0;
+                                orderingCustomer.patience = Math.min(100, orderingCustomer.patience + 25);
+                                
+                                if (!activeOrder) {
+                                    activeOrder = orderingCustomer;
+                                    cookState = 'PUT_PASTA';
+                                }
+                                showTip('😊 收到訂單！請往桌位 ' + (freeTableIndex + 1));
+                            }
+                        } else {
+                            orderingCustomer.serveDwell = Math.max(0, orderingCustomer.serveDwell - 0.01);
+                        }
                     }
                 }
             }
@@ -1381,9 +1401,14 @@
                         }
 
                         if (servedIndex !== -1) {
-                            // 成功匹配到客人，直接給錢！不再產生實體硬幣
+                            // 成功匹配到客人，進入用餐狀態
                             updateScore(25);
-                            customers.splice(servedIndex, 1);
+                            const c = customers[servedIndex];
+                            c.state = 'EATING';
+                            c.eatTimer = 0;
+                            if (c.tableIndex !== -1) {
+                                tableStates[c.tableIndex] = 'EATING';
+                            }
                         } else {
                             // 沒匹配到客人（可能等太久跑了），不給錢
                             showTip('❌ 找不到對應的客人需求！');
@@ -1819,44 +1844,67 @@
             }
 
             if (microLocation === 'DINING_ROOM') {
-                // 畫桌子與等餐客人
-                const waitingCustomers = customers.filter(c => c.state === 'WAITING_FOOD');
-                
-                // 畫桌子
+                // 1. 清理桌面邏輯
+                activeHandPositions.forEach(pos => {
+                    tableStates.forEach((state, idx) => {
+                        if (state === 'DIRTY') {
+                            const tablePos = TABLE_POSITIONS[idx];
+                            if (Math.hypot(pos.x - tablePos.x, pos.y - tablePos.y) < 100) {
+                                tableCleanProgress[idx] += 0.8; 
+                                if (tableCleanProgress[idx] >= 100) {
+                                    tableStates[idx] = 'FREE'; tableCleanProgress[idx] = 0;
+                                    showTip('✨ 桌面已清理乾淨！');
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // 2. 繪製桌子與內容 (基於 tableStates)
                 for (let i = 0; i < LEVELS[currentLevelIndex].tables; i++) {
                     const pos = TABLE_POSITIONS[i];
-                    ctx.fillStyle = '#7f8c8d';
-                    ctx.fillRect(pos.x - 60, pos.y - 10, 120, 20); // 桌子底座
-                    ctx.fillStyle = '#95a5a6';
-                    ctx.fillRect(pos.x - 50, pos.y - 50, 100, 40); // 桌面
-                }
-
-                waitingCustomers.forEach((c, index) => {
-                    const pos = TABLE_POSITIONS[index];
-                    if (!pos) return;
+                    const state = tableStates[i];
                     
-                    let cx = pos.x;
-                    let cy = pos.y - 80;
+                    // 桌子基座
+                    ctx.fillStyle = '#7f8c8d'; ctx.fillRect(pos.x - 60, pos.y - 10, 120, 20);
+                    ctx.fillStyle = (state === 'DIRTY') ? '#5d4037' : '#95a5a6';
+                    ctx.fillRect(pos.x - 50, pos.y - 50, 100, 40);
 
-                    ctx.save();
-                    // 畫客人本體
-                    ctx.fillStyle = '#e67e22';
-                    ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI * 2); ctx.fill(); // 頭
-                    ctx.fillRect(cx - 25, cy + 35, 50, 60); // 身體
+                    if (state === 'DIRTY') {
+                        // 髒污視覺
+                        ctx.fillStyle = 'rgba(101, 67, 33, 0.6)';
+                        ctx.beginPath(); ctx.arc(pos.x - 20, pos.y - 35, 15, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(pos.x + 15, pos.y - 42, 10, 0, Math.PI*2); ctx.fill();
+                        // 清理進度
+                        if (tableCleanProgress[i] > 0) {
+                            ctx.fillStyle = '#333'; ctx.fillRect(pos.x - 40, pos.y - 70, 80, 8);
+                            ctx.fillStyle = '#f1c40f'; ctx.fillRect(pos.x - 40, pos.y - 70, (tableCleanProgress[i]/100)*80, 8);
+                        }
+                    } else if (state === 'OCCUPIED' || state === 'EATING') {
+                        const c = customers.find(cust => cust.tableIndex === i);
+                        if (c) {
+                            let cx = pos.x; let cy = pos.y - 80;
+                            ctx.save();
+                            ctx.fillStyle = (state === 'EATING') ? '#d35400' : '#e67e22';
+                            ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI * 2); ctx.fill();
+                            ctx.fillRect(cx - 25, cy + 35, 50, 60);
+                            
+                            ctx.fillStyle = 'white'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
+                            ctx.fillText(state === 'EATING' ? '😋 用餐中' : '⌛ 等餐中', cx, cy - 60);
 
-                    // 等餐提示
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 16px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('⌛ 等餐中', cx, cy - 60);
-
-                    // 耐心條
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(cx - 30, cy + 100, 60, 6);
-                    ctx.fillStyle = c.patience > 50 ? '#2ecc71' : '#e74c3c';
-                    ctx.fillRect(cx - 30, cy + 100, (c.patience / 100) * 60, 6);
-                    ctx.restore();
-                });
+                            // 狀態條
+                            ctx.fillStyle = '#333'; ctx.fillRect(cx - 30, cy + 100, 60, 6);
+                            if (state === 'OCCUPIED') {
+                                ctx.fillStyle = c.patience > 50 ? '#2ecc71' : '#e74c3c';
+                                ctx.fillRect(cx - 30, cy + 100, (c.patience / 100) * 60, 6);
+                            } else {
+                                ctx.fillStyle = '#3498db';
+                                ctx.fillRect(cx - 30, cy + 100, (c.eatTimer / 300) * 60, 6);
+                            }
+                            ctx.restore();
+                        }
+                    }
+                }
 
                 // 畫出原本的打掃桌子背景 (如果有的話，這裡可以微調)
                 ctx.fillStyle = 'rgba(139, 69, 19, 0.3)';
