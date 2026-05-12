@@ -714,6 +714,7 @@
             timeDisplay.innerText = gameTimer;
 
             customers = [];
+            if (orderContainer) orderContainer.innerHTML = '';
             droppedMoney.forEach(m => World.remove(world, m.body));
             droppedMoney = [];
             customerSpawnTimer = 60; // 1秒後生第一位
@@ -723,7 +724,30 @@
             cleanPlates = 2; // 每一關重置盤子
             plateCountEl.innerText = cleanPlates;
 
-            setMicroLocation('COUNTER'); // 遊戲開始預設在櫃檯
+            // --- 重置桌位狀態 ---
+            tableStates = ['FREE', 'FREE', 'FREE', 'FREE'];
+            tableCleanProgress = [0, 0, 0, 0];
+            tableHasDrink = [false, false, false, false];
+            currentCleaningTable = -1;
+
+            // --- 重置廚房狀態 ---
+            activeOrder = null;
+            cookState = 'IDLE';
+            dragItems = { left: null, right: null };
+            plateHasNoodles = plateHasCement = plateHasCilantro = false;
+            potNoodleState = 'EMPTY';
+            potCookProgress = 0;
+            scrubAccumulator = 0;
+            if (washingPlate) washingPlate.dirtAmount = 100;
+
+            // --- 重置物理垃圾 (Matter.js) ---
+            if (typeof trashBodies !== 'undefined') {
+                trashBodies.forEach(body => World.remove(world, body));
+                trashBodies = [];
+            }
+            stains = []; 
+
+            setMicroLocation('COUNTER'); 
 
             // 啟動倒數計時器
             if (gameTimerInterval) clearInterval(gameTimerInterval);
