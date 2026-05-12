@@ -7,7 +7,8 @@
     <title>怪洨餐館 - MVP 核心架構 (第一人稱視角)</title>
     <style>
         /* 基礎重置與背景 */
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -37,7 +38,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain; /* 保持比例縮放 */
+            object-fit: contain;
+            /* 保持比例縮放 */
             z-index: 10;
         }
 
@@ -66,7 +68,8 @@
         }
 
         #status-hud {
-            bottom: 80px; /* 移至下方，避免與頂部訂單重疊 */
+            bottom: 80px;
+            /* 移至下方，避免與頂部訂單重疊 */
             left: 15px;
             display: none;
         }
@@ -96,7 +99,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: transparent; /* 改為透明，讓下方的 Canvas 雙手能透出來 */
+            background: transparent;
+            /* 改為透明，讓下方的 Canvas 雙手能透出來 */
             z-index: 100;
             display: flex;
             flex-direction: column;
@@ -136,7 +140,8 @@
         }
 
         .level-card {
-            background: rgba(44, 62, 80, 0.75); /* 改為半透明，讓後方的手勢特效能透出來 */
+            background: rgba(44, 62, 80, 0.75);
+            /* 改為半透明，讓後方的手勢特效能透出來 */
             border: 2px solid #34495e;
             border-radius: 12px;
             padding: 20px;
@@ -205,7 +210,8 @@
             font-size: 24px;
             font-weight: bold;
             color: white;
-            background: rgba(231, 76, 60, 0.85); /* 改為半透明 */
+            background: rgba(231, 76, 60, 0.85);
+            /* 改為半透明 */
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -247,7 +253,7 @@
             width: 120px;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -318,7 +324,7 @@
 
         <!-- 訂單 UI 容器 -->
         <div id="order-container"></div>
-        
+
         <div id="plate-display">🍽️ 乾淨盤子: <span id="plate-count">2</span></div>
 
         <!-- 遊戲進行中的 HUD (目前隱藏，進入 GAMEPLAY 才顯示) -->
@@ -330,7 +336,8 @@
                         style="font-weight:bold; color:#3498db;">COUNTER (櫃檯)</span></div>
                 <div style="margin-top: 5px;">營業額: $<span id="score-display"
                         style="font-weight:bold; font-size: 1.2em; color:#2ecc71;">0</span>
-                    <span id="review-display" style="color:#e74c3c; font-size:0.9em; margin-left:10px; display:none;">負評: 0</span>
+                    <span id="review-display"
+                        style="color:#e74c3c; font-size:0.9em; margin-left:10px; display:none;">負評: 0</span>
                 </div>
             </div>
         </div>
@@ -420,7 +427,7 @@
         let cookProgress = 0;
         let stirProgress = 0;
         const STIR_THRESHOLD = 1200; // 攪拌閾值
-        
+
         let washingPlate = { x: 330, y: 120, w: 300, h: 300, dirtAmount: 100 }; // 擴大感應範圍 (原本 200)
         let lastHandPositions = { left: null, right: null }; // 分開記錄雙手位置
         let scrubAccumulator = 0;
@@ -436,13 +443,17 @@
         let potCookProgress = 0;
         let tipText = "";
         let tipTimer = 0;
-        
+
         const TABLE_POSITIONS = [
             { x: 250, y: 400 },
             { x: 480, y: 400 },
             { x: 710, y: 400 },
             { x: 480, y: 200 }
         ];
+        let tableStates = ['FREE', 'FREE', 'FREE', 'FREE']; 
+        let tableCleanProgress = [0, 0, 0, 0]; 
+        let tableHasDrink = [false, false, false, false]; 
+        let currentCleaningTable = -1; 
 
         // 導航停留偵測 (Dwell Navigation)
         let hoverTarget = null;
@@ -455,16 +466,26 @@
                 DINING_ROOM: { x: 860, y: 190, w: 100, h: 160 },
                 SINK: { x: 420, y: 440, w: 120, h: 100 }
             };
-            
+
             // 根據目前位置調整感應區
             if (microLocation === 'KITCHEN') {
                 zones.COUNTER = { x: 860, y: 190, w: 100, h: 160 }; // 廚房回櫃檯在右
             } else if (microLocation === 'DINING_ROOM') {
                 // 用餐區回櫃檯：左側
                 zones.COUNTER = { x: 0, y: 190, w: 100, h: 160 };
+                // 髒桌子感應區：如果桌子是髒的，增加一個進入特寫的感應
+                tableStates.forEach((state, idx) => {
+                    if (state === 'DIRTY' && idx < LEVELS[currentLevelIndex].tables) {
+                        const pos = TABLE_POSITIONS[idx];
+                        zones[`CLEAN_TABLE_${idx}`] = { x: pos.x - 50, y: pos.y - 50, w: 100, h: 100 };
+                    }
+                });
             } else if (microLocation === 'SINK') {
                 // 洗手台回廚房：左側 (同步視覺移動)
                 zones.KITCHEN = { x: 0, y: 190, w: 100, h: 160 };
+            } else if (microLocation === 'TABLE_CLEANING') {
+                // 從特寫畫面回用餐區
+                zones.DINING_ROOM = { x: 0, y: 0, w: 100, h: 100 }; // 左上角返回
             }
             return zones;
         }
@@ -760,21 +781,19 @@
         };
 
         // --- 微觀空間切換 (Micro Location) ---
-        window.setMicroLocation = function (loc) {
+        window.setMicroLocation = function (loc, tableIdx = -1) {
             if (macroState !== 'GAMEPLAY') return;
-            
+
             // 離開舊空間的清理
             if (microLocation === 'COUNTER') {
                 droppedMoney.forEach(m => World.remove(world, m.body));
-            } else if (microLocation === 'DINING_ROOM') {
-                trashBodies.forEach(b => World.remove(world, b));
-                trashBodies = [];
-                stains = [];
+                droppedMoney = [];
             }
 
             microLocation = loc;
-            stateDisplay.innerText = loc;
-            
+            stateDisplay.innerText = loc === 'TABLE_CLEANING' ? `CLEANING TABLE ${tableIdx + 1}` : loc;
+            currentCleaningTable = tableIdx;
+
             // 進入新空間的初始化
             if (loc === 'SINK') {
                 if (cleanPlates < MAX_PLATES) {
@@ -789,43 +808,28 @@
             } else if (loc === 'COUNTER') {
                 droppedMoney.forEach(m => World.add(world, m.body));
             } else if (loc === 'DINING_ROOM') {
-                // 為了測試，進入用餐區時直接生成打掃事件
+                // 清理用餐區之前的髒汙物件
+                trashBodies.forEach(b => World.remove(world, b));
+                trashBodies = [];
+                stains = [];
+            } else if (loc === 'TABLE_CLEANING') {
+                // 特寫進入時，產生打掃任務
                 cleaningSubState = 'INIT';
-                setTimeout(() => { cleaningSubState = 'CLEAR_TRASH'; }, 1500); // 提示 1.5 秒後開始
-                lastOrderType = Math.random() > 0.5 ? 'PASTA' : 'DRINK';
-
-                // 生成特定餐具垃圾
-                if (lastOrderType === 'PASTA') {
-                    let plate = Bodies.circle(480, 300, 60, { frictionAir: 0.1, label: 'trash_plate', restitution: 0.2 });
-                    let fork = Bodies.rectangle(600, 300, 20, 100, { frictionAir: 0.1, label: 'trash_utensil', restitution: 0.2 });
-                    trashBodies.push(plate, fork);
-                    World.add(world, [plate, fork]);
-                } else {
-                    let cup = Bodies.rectangle(480, 300, 40, 70, { frictionAir: 0.1, label: 'trash_cup', restitution: 0.2 });
-                    trashBodies.push(cup);
-                    World.add(world, cup);
+                setTimeout(() => { cleaningSubState = 'CLEAR_TRASH'; }, 500); 
+                
+                // 產生該桌子的垃圾
+                let plate = Bodies.circle(480, 300, 60, { frictionAir: 0.1, label: 'trash_plate', restitution: 0.2 });
+                let fork = Bodies.rectangle(600, 300, 20, 100, { frictionAir: 0.1, label: 'trash_utensil', restitution: 0.2 });
+                
+                let bodies = [plate, fork];
+                // 只有當該桌點過飲料時才生成杯子
+                if (tableHasDrink[tableIdx]) {
+                    let cup = Bodies.rectangle(350, 350, 40, 70, { frictionAir: 0.1, label: 'trash_cup', restitution: 0.2 });
+                    bodies.push(cup);
                 }
-
-                // 生成紙團
-                const paperCount = 2 + Math.floor(Math.random() * 3);
-                for (let i = 0; i < paperCount; i++) {
-                    let trash = Bodies.circle(200 + Math.random() * 560, 150 + Math.random() * 250, 25, {
-                        frictionAir: 0.15,
-                        label: 'trash_paper',
-                        restitution: 0.3
-                    });
-                    trashBodies.push(trash);
-                    World.add(world, trash);
-                }
-
-                for (let i = 0; i < 5; i++) {
-                    stains.push({
-                        x: 200 + Math.random() * 560,
-                        y: 150 + Math.random() * 250,
-                        r: 45,
-                        alpha: 1.0
-                    });
-                }
+                
+                trashBodies.push(...bodies);
+                World.add(world, bodies);
             }
         };
 
@@ -839,24 +843,29 @@
             }
 
             let currentZone = null;
-            
+            let targetKey = null;
+
             let allowedTargets = [];
             if (microLocation === 'COUNTER') allowedTargets = ['KITCHEN', 'DINING_ROOM'];
             else if (microLocation === 'KITCHEN') allowedTargets = ['COUNTER', 'SINK'];
             else if (microLocation === 'DINING_ROOM') allowedTargets = ['COUNTER'];
             else if (microLocation === 'SINK') allowedTargets = ['KITCHEN'];
+            else if (microLocation === 'TABLE_CLEANING') allowedTargets = ['DINING_ROOM'];
 
             const zones = getDynamicNavZones();
-            for (const key of allowedTargets) {
-                const zone = zones[key];
-                for (const pos of activeHandPositions) {
-                    if (pos.x >= zone.x && pos.x <= zone.x + zone.w &&
-                        pos.y >= zone.y && pos.y <= zone.y + zone.h) {
-                        currentZone = key;
-                        break;
+            for (const key in zones) {
+                // 限制只能在允許的範圍移動
+                if (allowedTargets.includes(key) || key.startsWith('CLEAN_TABLE_')) {
+                    const zone = zones[key];
+                    for (const pos of activeHandPositions) {
+                        if (pos.x >= zone.x && pos.x <= zone.x + zone.w &&
+                            pos.y >= zone.y && pos.y <= zone.y + zone.h) {
+                            currentZone = key;
+                            break;
+                        }
                     }
                 }
-                if (currentZone) break;
+                if (currentZone) { targetKey = currentZone; break; }
             }
 
             if (currentZone) {
@@ -864,7 +873,12 @@
                     const elapsed = Date.now() - hoverStartTime;
                     dwellProgress = Math.min(1, elapsed / HOVER_DWELL_TIME);
                     if (dwellProgress >= 1) {
-                        setMicroLocation(currentZone);
+                        if (targetKey.startsWith('CLEAN_TABLE_')) {
+                            const idx = parseInt(targetKey.replace('CLEAN_TABLE_', ''));
+                            setMicroLocation('TABLE_CLEANING', idx);
+                        } else {
+                            setMicroLocation(targetKey);
+                        }
                         hoverTarget = null;
                         dwellProgress = 0;
                         dwellCooldown = Date.now() + DWELL_COOLDOWN_TIME;
@@ -896,11 +910,11 @@
             for (const item of registeredUiElements) {
                 const rect = item.el.getBoundingClientRect();
                 const canvasRect = canvas.getBoundingClientRect();
-                
+
                 // 計算縮放比例
                 const scaleX = GAME_WIDTH / canvas.offsetWidth;
                 const scaleY = GAME_HEIGHT / canvas.offsetHeight;
-                
+
                 // 將 CSS 座標轉換為遊戲內部座標 (960x540)
                 const zone = {
                     x: (rect.left - canvasRect.left) * scaleX,
@@ -1005,9 +1019,12 @@
                     customers.push({
                         id: Date.now(),
                         orderType: type,
-                        state: 'ORDERING', // ORDERING, WAITING_FOOD
+                        state: 'ORDERING',
                         patience: 100,
-                        serveDwell: 0
+                        serveDwell: 0,
+                        tableIndex: -1, // 尚未入座
+                        eatTimer: 0,
+                        hasDrink: false // 預留給未來關卡
                     });
                     // 基礎 4 秒生一個 + 每個負評增加 1.5 秒的生成時間
                     customerSpawnTimer = 240 + (negativeReviews * 90);
@@ -1015,49 +1032,54 @@
                 for (let i = customers.length - 1; i >= 0; i--) {
                     let c = customers[i];
                     // 坐在位子上等餐 (WAITING_FOOD) 通常比站在櫃檯點餐有耐心 (大幅調慢)
-                    const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.01 : 0.04;
+                    // 客人耐心下降速度調慢 (點餐從 0.04 -> 0.02，等餐從 0.01 -> 0.006)
+                    const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.006 : 0.02;
                     c.patience -= patienceLoss;
 
                     if (c.patience <= 0) {
-                        // 如果是正在處理的訂單對象氣走了
+                        // ... (之前已有的耐心耗盡邏輯)
                         if (activeOrder && activeOrder.id === c.id) {
-                            activeOrder = null;
-                            cookState = 'IDLE';
-                            dragItem = null;
-                            // 重置盤中物與鍋子狀態，防止殘留
-                            plateHasNoodles = false;
-                            plateHasCement = false;
-                            plateHasCilantro = false;
-                            potNoodleState = 'EMPTY';
-                            potCookProgress = 0;
+                            activeOrder = null; cookState = 'IDLE'; dragItem = null;
+                            plateHasNoodles = plateHasCement = plateHasCilantro = false;
+                            potNoodleState = 'EMPTY'; potCookProgress = 0;
+                        }
+                        if (c.tableIndex !== -1) {
+                            tableStates[c.tableIndex] = 'DIRTY';
+                            tableCleanProgress[c.tableIndex] = 0;
                         }
                         customers.splice(i, 1);
-                        negativeReviews++;
-                        customerSpawnTimer += 180;
+                        negativeReviews++; customerSpawnTimer += 180;
                         updateReviews();
+                    } else if (c.state === 'EATING') {
+                        c.eatTimer++;
+                        if (c.eatTimer > 300) { // 用餐 5 秒
+                            if (c.tableIndex !== -1) {
+                                tableStates[c.tableIndex] = 'DIRTY';
+                                tableCleanProgress[c.tableIndex] = 0;
+                                tableHasDrink[c.tableIndex] = c.hasDrink; // 轉移飲料垃圾狀態
+                            }
+                            customers.splice(i, 1);
+                        }
                     }
                 }
             }
 
-            // 檢查垃圾是否被撥出畫面
-            if (microLocation === 'DINING_ROOM') {
+            // 檢查垃圾是否被撥出畫面 (特寫畫面)
+            if (microLocation === 'TABLE_CLEANING') {
                 if (cleaningSubState === 'CLEAR_TRASH') {
                     trashBodies = trashBodies.filter(body => {
                         const px = body.position.x;
                         const py = body.position.y;
                         if (px < 50 || px > 910 || py < 50 || py > 550) {
                             World.remove(world, body);
-                            updateScore(5); // 賺取清理費
+                            // 移除任何清理垃圾的金錢獎勵
                             return false;
                         }
                         return true;
                     });
 
                     if (trashBodies.length === 0) {
-                        cleaningSubState = 'TRANSITION';
-                        setTimeout(() => {
-                            cleaningSubState = 'WIPE_TABLE';
-                        }, 1500);
+                        cleaningSubState = 'WIPE_TABLE';
                     }
                 }
             }
@@ -1109,21 +1131,32 @@
                 // 1. 微笑接單邏輯
                 const orderingCustomer = customers.find(c => c.state === 'ORDERING');
                 if (orderingCustomer) {
-                    if (isSmiling) {
-                        orderingCustomer.serveDwell += 0.03; // 微笑接單速度
-                        if (orderingCustomer.serveDwell >= 1) {
-                            orderingCustomer.state = 'WAITING_FOOD';
-                            orderingCustomer.serveDwell = 0;
-                            orderingCustomer.patience = Math.min(100, orderingCustomer.patience + 25);
-                            
-                            if (!activeOrder) {
-                                activeOrder = orderingCustomer;
-                                cookState = 'PUT_PASTA';
-                            }
-                            showTip('😊 收到訂單囉！');
-                        }
+                    // 檢查是否有空桌子 (FREE 狀態且在當前關卡桌數範圍內)
+                    const freeTableIndex = tableStates.findIndex((s, idx) => s === 'FREE' && idx < LEVELS[currentLevelIndex].tables);
+
+                    if (freeTableIndex === -1) {
+                        // 沒空桌時，微笑會給予提示
+                        if (isSmiling) showTip('⚠️ 沒有空桌子了！請先往用餐區清理桌面 ⚠️');
+                        orderingCustomer.serveDwell = 0;
                     } else {
-                        orderingCustomer.serveDwell = Math.max(0, orderingCustomer.serveDwell - 0.01);
+                        if (isSmiling) {
+                            orderingCustomer.serveDwell += 0.03;
+                            if (orderingCustomer.serveDwell >= 1) {
+                                orderingCustomer.state = 'WAITING_FOOD';
+                                orderingCustomer.tableIndex = freeTableIndex;
+                                tableStates[freeTableIndex] = 'OCCUPIED';
+                                orderingCustomer.serveDwell = 0;
+                                orderingCustomer.patience = Math.min(100, orderingCustomer.patience + 25);
+
+                                if (!activeOrder) {
+                                    activeOrder = orderingCustomer;
+                                    cookState = 'PUT_PASTA';
+                                }
+                                showTip('😊 收到訂單！請往桌位 ' + (freeTableIndex + 1));
+                            }
+                        } else {
+                            orderingCustomer.serveDwell = Math.max(0, orderingCustomer.serveDwell - 0.01);
+                        }
                     }
                 }
             }
@@ -1137,7 +1170,7 @@
 
             // 比對當前 UI 元素數量與客人數量，避免頻繁 innerHTML 重建
             const currentCards = orderContainer.querySelectorAll('.order-card');
-            
+
             // 簡單處理：全量更新 (或可優化為對應更新)
             let html = '';
             customers.forEach((c, index) => {
@@ -1150,7 +1183,7 @@
 
                 const statusText = c.state === 'ORDERING' ? '點餐中' : '等餐中';
                 const color = c.patience > 60 ? '#27ae60' : (c.patience > 30 ? '#f39c12' : '#e74c3c');
-                
+
                 html += `
                     <div class="order-card" style="border-color: ${index === 0 ? '#f1c40f' : '#fff'}">
                         <div class="order-patience-bg">
@@ -1189,7 +1222,7 @@
                 const palm = landmarks[9];
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
-                activeHandPositions.push({ x: px, y: py });
+                activeHandPositions.push({ x: px, y: py, isRight: true });
 
                 if (macroState === 'GAMEPLAY') {
                     if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
@@ -1209,7 +1242,7 @@
                 const palm = landmarks[9];
                 const px = (1 - palm.x) * GAME_WIDTH;
                 const py = palm.y * GAME_HEIGHT;
-                activeHandPositions.push({ x: px, y: py });
+                activeHandPositions.push({ x: px, y: py, isRight: false });
 
                 if (macroState === 'GAMEPLAY') {
                     if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
@@ -1226,16 +1259,24 @@
 
             // --- 統一處理空間邏輯 (依據收集到的 activeHandPositions) ---
             if (macroState === 'GAMEPLAY') {
-                if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
-                    handResult.landmarks.forEach((landmarks, idx) => {
-                        const isRight = handResult.handednesses[idx][0].categoryName === 'Right';
-                        const palm = landmarks[9];
-                        const px = (1 - palm.x) * GAME_WIDTH;
-                        const py = palm.y * GAME_HEIGHT;
-                        checkWiping(px, py, isRight ? 'right' : 'left');
-                    });
+                if (microLocation === 'TABLE_CLEANING') {
+                    // 特寫擦拭邏輯 (雙手皆可觸發)
+                    if (cleaningSubState === 'WIPE_TABLE' && currentCleaningTable !== -1) {
+                        activeHandPositions.forEach(pos => {
+                            // 特寫畫面中央就是桌子
+                            const dist = Math.hypot(pos.x - 480, pos.y - 300);
+                            if (dist < 200) {
+                                tableCleanProgress[currentCleaningTable] += 0.8; // 稍微調整擦拭速度平衡
+                                if (tableCleanProgress[currentCleaningTable] >= 100) {
+                                    tableStates[currentCleaningTable] = 'FREE';
+                                    tableCleanProgress[currentCleaningTable] = 0;
+                                    showTip('✨ 桌面已清理乾淨！');
+                                    setTimeout(() => { setMicroLocation('DINING_ROOM'); }, 800);
+                                }
+                            }
+                        });
+                    }
                 }
-
                 if (microLocation === 'SINK') {
                     if (washingPlate.dirtAmount > 0) {
                         handResult.landmarks.forEach((landmarks, idx) => {
@@ -1248,168 +1289,147 @@
                     }
                 }
                 if (microLocation === 'COUNTER') {
-                    // 1. 檢查是否抓到錢 (保留舊硬幣抓取功能)
-                    droppedMoney = droppedMoney.filter(m => {
-                        let grabbed = false;
-                        activeHandPositions.forEach(pos => {
-                            let dx = pos.x - m.body.position.x;
-                            let dy = pos.y - m.body.position.y;
-                            if (Math.hypot(dx, dy) < 60) grabbed = true; 
-                        });
-                        if (grabbed) {
-                            updateScore(m.value);
-                            World.remove(world, m.body);
-                            return false;
-                        }
-                        return true;
-                    });
-
+                    // 移除掉落錢幣的抓取邏輯，確保只有出餐給錢
+                    droppedMoney = [];
                 }
                 checkDwellNavigation();
                 if (microLocation === 'KITCHEN' && activeOrder) {
-                    // 傳遞右手作為主要料理手，或第一個偵測到的手
-                    const handType = (handResult.landmarks.length > 0 && handResult.handednesses[0][0].categoryName === 'Right') ? 'right' : 'left';
-                    handleCookingLogic(handType);
+                    // 雙手皆可抓取食材與料理
+                    handleCookingLogic();
                 }
             }
             checkUiDwellActions();
         }
 
-        function handleCookingLogic(handType) {
+        function handleCookingLogic() {
             if (!activeOrder || activeHandPositions.length === 0) return;
-            let px = activeHandPositions[0].x;
-            let py = activeHandPositions[0].y;
 
-            // 定義感應區
-            const rawPastaArea = { x: 70, y: 350, w: 120, h: 120 };
-            const potArea = { x: 300, y: 300, w: 150, h: 120 };
-            const plateArea = { x: 750, y: 350, w: 150, h: 100 };
-            const cilantroArea = { x: 70, y: 100, w: 120, h: 120 };
-            const cementArea = { x: 250, y: 100, w: 120, h: 120 };
-            const serveArea = { x: 600, y: 50, w: 200, h: 100 };
+            // 遍歷所有偵測到的手部位置
+            activeHandPositions.forEach(pos => {
+                const px = pos.x;
+                const py = pos.y;
+                const handSide = pos.isRight ? 'right' : 'left';
 
-            // 狀態機
-            if (cookState === 'PUT_PASTA' || cookState === 'ASSEMBLY') {
-                // 為了靈活性，這兩個狀態合併為自由組裝/烹飪階段
-                
-                // --- 鍋子邏輯 ---
-                if (potNoodleState === 'EMPTY') {
-                    if (!dragItem && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
-                        dragItem = 'RAW_PASTA';
-                    }
-                    if (dragItem === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
-                        dragItem = null;
-                        potNoodleState = 'BOILING';
-                        potCookProgress = 0;
-                    }
-                } else if (potNoodleState === 'BOILING') {
-                    potCookProgress += 0.5;
-                    if (potCookProgress >= 100) {
-                        potNoodleState = 'READY';
-                    }
-                } else if (potNoodleState === 'READY') {
-                    if (!dragItem && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
-                        dragItem = 'COOKED_PASTA';
-                        potNoodleState = 'EMPTY';
-                    }
-                }
+                // 定義感應區
+                const rawPastaArea = { x: 70, y: 350, w: 120, h: 120 };
+                const potArea = { x: 300, y: 300, w: 150, h: 120 };
+                const plateArea = { x: 750, y: 350, w: 150, h: 100 };
+                const cilantroArea = { x: 70, y: 100, w: 120, h: 120 };
+                const cementArea = { x: 250, y: 100, w: 120, h: 120 };
+                const serveArea = { x: 600, y: 50, w: 200, h: 100 };
 
-                // --- 盤子配料邏輯 ---
-                // 抓取混泥土 (如果需求需要且盤子還沒加，且手上沒拿東西)
-                if (!dragItem && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
-                    dragItem = 'CEMENT';
-                }
-                // 抓取香菜 (如果需求需要且盤子還沒加，且手上沒拿東西)
-                if (!dragItem && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
-                    dragItem = 'CILANTRO';
-                }
-
-                // 放下任何東西到盤子
-                if (dragItem && (dragItem === 'COOKED_PASTA' || dragItem === 'CEMENT' || dragItem === 'CILANTRO') && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
-                    if (cleanPlates > 0 || plateHasNoodles || plateHasCement || plateHasCilantro) {
-                        if (dragItem === 'COOKED_PASTA') plateHasNoodles = true;
-                        if (dragItem === 'CEMENT') plateHasCement = true;
-                        if (dragItem === 'CILANTRO') plateHasCilantro = true;
-                        dragItem = null;
-                    } else {
-                        showTip('❌ 沒有乾淨盤子了！快去洗碗！');
-                    }
-                }
-
-                // 檢查是否所有必要的東西都到齊了 -> 進入攪拌
-                const needsCement = activeOrder.orderType.includes('CEMENT');
-                const needsCilantro = activeOrder.orderType.includes('CILANTRO');
-                if (plateHasNoodles && (plateHasCement || !needsCement) && (plateHasCilantro || !needsCilantro)) {
-                    cookState = 'STIRRING';
-                    stirProgress = 0;
-                    lastHandPositions[handType] = null;
-                }
-            } else if (cookState === 'STIRRING') {
-                if (px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
-                    const lastPos = lastHandPositions[handType];
-                    if (lastPos) {
-                        const dist = Math.hypot(px - lastPos.x, py - lastPos.y);
-                        stirProgress += dist;
-                        if (stirProgress > STIR_THRESHOLD) { 
-                            cookState = 'SERVE';
+                // 狀態機
+                if (cookState === 'PUT_PASTA' || cookState === 'ASSEMBLY') {
+                    // --- 鍋子邏輯 ---
+                    if (potNoodleState === 'EMPTY') {
+                        if (!dragItem && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
+                            dragItem = 'RAW_PASTA';
+                        }
+                        if (dragItem === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
                             dragItem = null;
+                            potNoodleState = 'BOILING';
+                            potCookProgress = 0;
+                        }
+                    } else if (potNoodleState === 'BOILING') {
+                        potCookProgress += 0.5;
+                        if (potCookProgress >= 100) {
+                            potNoodleState = 'READY';
+                        }
+                    } else if (potNoodleState === 'READY') {
+                        if (!dragItem && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
+                            dragItem = 'COOKED_PASTA';
+                            potNoodleState = 'EMPTY';
                         }
                     }
-                    lastHandPositions[handType] = { x: px, y: py };
-                } else {
-                    lastHandPositions[handType] = null;
-                }
-            } else if (cookState === 'SERVE') {
-                if (!dragItem && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
-                    dragItem = 'FINISHED_PLATE';
-                }
-                if (dragItem === 'FINISHED_PLATE' && px > serveArea.x && px < serveArea.x + serveArea.w && py > serveArea.y && py < serveArea.y + serveArea.h) {
-                    // 完成出餐！
-                    if (cleanPlates > 0) {
-                        cleanPlates--; // 消耗一個盤子
-                        plateCountEl.innerText = cleanPlates;
 
-                        // 移除對應需求的客人 (優先移除隊伍最前面的匹配者)
-                        let servedIndex = -1;
-                        if (activeOrder) {
-                            for (let i = 0; i < customers.length; i++) {
-                                if (customers[i].state === 'WAITING_FOOD' && customers[i].orderType === activeOrder.orderType) {
-                                    servedIndex = i;
-                                    break;
-                                }
+                    // --- 盤子配料邏輯 ---
+                    if (!dragItem && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
+                        dragItem = 'CEMENT';
+                    }
+                    if (!dragItem && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
+                        dragItem = 'CILANTRO';
+                    }
+
+                    if (dragItem && (dragItem === 'COOKED_PASTA' || dragItem === 'CEMENT' || dragItem === 'CILANTRO') && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
+                        if (cleanPlates > 0 || plateHasNoodles || plateHasCement || plateHasCilantro) {
+                            if (dragItem === 'COOKED_PASTA') plateHasNoodles = true;
+                            if (dragItem === 'CEMENT') plateHasCement = true;
+                            if (dragItem === 'CILANTRO') plateHasCilantro = true;
+                            dragItem = null;
+                        } else {
+                            showTip('❌ 沒有乾淨盤子了！快去洗碗！');
+                        }
+                    }
+
+                    const needsCement = activeOrder.orderType.includes('CEMENT');
+                    const needsCilantro = activeOrder.orderType.includes('CILANTRO');
+                    if (plateHasNoodles && (plateHasCement || !needsCement) && (plateHasCilantro || !needsCilantro)) {
+                        cookState = 'STIRRING';
+                        stirProgress = 0;
+                        lastHandPositions[handSide] = null;
+                    }
+                } else if (cookState === 'STIRRING') {
+                    if (px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
+                        const lastPos = lastHandPositions[handSide];
+                        if (lastPos) {
+                            const dist = Math.hypot(px - lastPos.x, py - lastPos.y);
+                            stirProgress += dist;
+                            if (stirProgress > STIR_THRESHOLD) {
+                                cookState = 'SERVE';
+                                dragItem = null;
                             }
                         }
-
-                        if (servedIndex !== -1) {
-                            // 成功匹配到客人，直接給錢！不再產生實體硬幣
-                            updateScore(25);
-                            customers.splice(servedIndex, 1);
-                        } else {
-                            // 沒匹配到客人（可能等太久跑了），不給錢
-                            showTip('❌ 找不到對應的客人需求！');
-                        }
-                        
-                        activeOrder = null;
-                        dragItem = null;
-                        cookState = 'IDLE';
-                        
-                        // 重置盤子狀態，確保下一份餐點是空的
-                        plateHasNoodles = false;
-                        plateHasCement = false;
-                        plateHasCilantro = false;
-
-                        // 出餐後，自動尋找下一個「已接單但尚未開始料理」的客人
-                        const nextCustomer = customers.find(c => c.state === 'WAITING_FOOD');
-                        if (nextCustomer) {
-                            activeOrder = nextCustomer;
-                            cookState = 'PUT_PASTA';
-                        }
+                        lastHandPositions[handSide] = { x: px, y: py };
                     } else {
-                        // 沒盤子，提示玩家
-                        showTip('❌ 沒有乾淨盤子了！快去洗碗！');
+                        lastHandPositions[handSide] = null;
+                    }
+                } else if (cookState === 'SERVE') {
+                    if (!dragItem && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
+                        dragItem = 'FINISHED_PLATE';
+                    }
+                    if (dragItem === 'FINISHED_PLATE' && px > serveArea.x && px < serveArea.x + serveArea.w && py > serveArea.y && py < serveArea.y + serveArea.h) {
+                        if (cleanPlates > 0) {
+                            cleanPlates--; 
+                            plateCountEl.innerText = cleanPlates;
+
+                            let servedIndex = -1;
+                            if (activeOrder) {
+                                for (let i = 0; i < customers.length; i++) {
+                                    if (customers[i].state === 'WAITING_FOOD' && customers[i].orderType === activeOrder.orderType) {
+                                        servedIndex = i;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (servedIndex !== -1) {
+                                updateScore(25);
+                                const c = customers[servedIndex];
+                                c.state = 'EATING';
+                                c.eatTimer = 0;
+                                if (c.tableIndex !== -1) {
+                                    tableStates[c.tableIndex] = 'EATING';
+                                }
+                            } else {
+                                showTip('❌ 找不到對應的客人需求！');
+                            }
+
+                            activeOrder = null;
+                            dragItem = null;
+                            cookState = 'IDLE';
+                            plateHasNoodles = plateHasCement = plateHasCilantro = false;
+
+                            const nextCustomer = customers.find(c => c.state === 'WAITING_FOOD');
+                            if (nextCustomer) {
+                                activeOrder = nextCustomer;
+                                cookState = 'PUT_PASTA';
+                            }
+                        } else {
+                            showTip('❌ 沒有乾淨盤子了！快去洗碗！');
+                        }
                     }
                 }
-            }
+            });
         }
 
         function showTip(text) {
@@ -1485,21 +1505,21 @@
 
             // 畫鍋子
             ctx.fillStyle = '#34495e';
-            ctx.beginPath(); ctx.arc(potArea.x + potArea.w/2, potArea.y + potArea.h/2 + 20, 60, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(potArea.x + potArea.w / 2, potArea.y + potArea.h / 2 + 20, 60, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#2c3e50';
-            ctx.beginPath(); ctx.arc(potArea.x + potArea.w/2, potArea.y + potArea.h/2, 60, 0, Math.PI*2); ctx.fill();
-            
+            ctx.beginPath(); ctx.arc(potArea.x + potArea.w / 2, potArea.y + potArea.h / 2, 60, 0, Math.PI * 2); ctx.fill();
+
             // 鍋子邏輯顯示
             if (potNoodleState !== 'EMPTY') {
                 ctx.fillStyle = '#3498db'; // 水
-                ctx.beginPath(); ctx.arc(potArea.x + potArea.w/2, potArea.y + potArea.h/2, 50, 0, Math.PI*2); ctx.fill();
-                
+                ctx.beginPath(); ctx.arc(potArea.x + potArea.w / 2, potArea.y + potArea.h / 2, 50, 0, Math.PI * 2); ctx.fill();
+
                 if (potNoodleState === 'BOILING') {
                     ctx.fillStyle = '#e74c3c';
                     ctx.fillRect(potArea.x + 25, potArea.y - 20, potCookProgress, 10);
                 } else if (potNoodleState === 'READY') {
                     ctx.fillStyle = '#f39c12'; // 熟麵色
-                    ctx.beginPath(); ctx.arc(potArea.x + potArea.w/2, potArea.y + potArea.h/2, 40, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(potArea.x + potArea.w / 2, potArea.y + potArea.h / 2, 40, 0, Math.PI * 2); ctx.fill();
                 }
             }
 
@@ -1507,21 +1527,21 @@
             const shouldShowPlate = (cleanPlates > 0 || plateHasNoodles || plateHasCement || plateHasCilantro);
             if (dragItem !== 'FINISHED_PLATE' && shouldShowPlate) {
                 ctx.fillStyle = 'white';
-                ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w/2, plateArea.y + plateArea.h/2, 60, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w / 2, plateArea.y + plateArea.h / 2, 60, 0, Math.PI * 2); ctx.fill();
                 ctx.lineWidth = 4; ctx.strokeStyle = '#bdc3c7'; ctx.stroke();
-                
+
                 // 盤子內容物 (改為依據 boolean 判斷)
                 if (plateHasNoodles) {
                     ctx.fillStyle = '#f39c12'; // 麵
-                    ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w/2, plateArea.y + plateArea.h/2, 45, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w / 2, plateArea.y + plateArea.h / 2, 45, 0, Math.PI * 2); ctx.fill();
                 }
                 if (plateHasCement) {
                     ctx.fillStyle = '#95a5a6'; // 混泥土色
-                    ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w/2 - 10, plateArea.y + plateArea.h/2, 25, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w / 2 - 10, plateArea.y + plateArea.h / 2, 25, 0, Math.PI * 2); ctx.fill();
                 }
                 if (plateHasCilantro) {
                     ctx.fillStyle = '#2ecc71'; // 香菜
-                    ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w/2 + 10, plateArea.y + plateArea.h/2 - 10, 20, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(plateArea.x + plateArea.w / 2 + 10, plateArea.y + plateArea.h / 2 - 10, 20, 0, Math.PI * 2); ctx.fill();
                 }
             }
 
@@ -1531,7 +1551,7 @@
                 ctx.lineWidth = 6;
                 ctx.beginPath();
                 const stirRatio = Math.min(1, stirProgress / STIR_THRESHOLD);
-                ctx.arc(plateArea.x + plateArea.w/2, plateArea.y + plateArea.h/2, 70, -Math.PI/2, -Math.PI/2 + stirRatio * Math.PI*2);
+                ctx.arc(plateArea.x + plateArea.w / 2, plateArea.y + plateArea.h / 2, 70, -Math.PI / 2, -Math.PI / 2 + stirRatio * Math.PI * 2);
                 ctx.stroke();
             }
 
@@ -1548,19 +1568,19 @@
                 let px = activeHandPositions[0].x;
                 let py = activeHandPositions[0].y;
                 if (dragItem === 'RAW_PASTA') {
-                    ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI * 2); ctx.fill();
                 } else if (dragItem === 'COOKED_PASTA') {
-                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI * 2); ctx.fill();
                 } else if (dragItem === 'CILANTRO') {
-                    ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(px, py, 20, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(px, py, 20, 0, Math.PI * 2); ctx.fill();
                 } else if (dragItem === 'CEMENT') {
-                    ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.arc(px, py, 25, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.arc(px, py, 25, 0, Math.PI * 2); ctx.fill();
                 } else if (dragItem === 'FINISHED_PLATE') {
-                    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(px, py, 40, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(px, py, 40, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI * 2); ctx.fill();
                 }
             }
-            
+
             ctx.restore();
         }
 
@@ -1602,7 +1622,7 @@
                         cleanPlates = Math.min(MAX_PLATES, cleanPlates + 1);
                         plateCountEl.innerText = cleanPlates;
                         // 移除洗碗金錢獎勵
-                        
+
                         // 重置，準備洗下一個盤子
                         scrubAccumulator = 0;
                         if (cleanPlates < MAX_PLATES) {
@@ -1713,10 +1733,9 @@
                 const middleMCP = landmarks[9];
                 const pxM = (1 - middleMCP.x) * GAME_WIDTH;
                 const pyM = middleMCP.y * GAME_HEIGHT;
-                
+
                 const r = 45;
                 ctx.beginPath();
-                ctx.arc(pxM, pyM, r, 0, Math.PI * 2);
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
                 ctx.lineWidth = 6;
                 ctx.stroke();
@@ -1745,18 +1764,18 @@
                 const orderingCustomers = customers.filter(c => c.state === 'ORDERING');
                 if (orderingCustomers.length > 0) {
                     const c = orderingCustomers[0];
-                    let cx = 480; 
+                    let cx = 480;
                     let cy = 300;
-                    
+
                     ctx.save();
                     // 畫客人本體
                     ctx.fillStyle = '#3498db';
-                    ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI*2); ctx.fill(); // 頭
+                    ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI * 2); ctx.fill(); // 頭
                     ctx.fillRect(cx - 30, cy + 40, 60, 80); // 身體
 
                     // 點餐氣泡
                     ctx.fillStyle = 'white';
-                    ctx.beginPath(); ctx.arc(cx, cy - 80, 50, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx, cy - 80, 50, 0, Math.PI * 2); ctx.fill();
                     ctx.fillStyle = 'black';
                     ctx.font = '30px Arial';
                     ctx.textAlign = 'center';
@@ -1765,7 +1784,7 @@
                     // 出餐滯留環 (接單進度)
                     if (c.serveDwell > 0) {
                         ctx.beginPath();
-                        ctx.arc(cx, cy - 80, 55, -Math.PI/2, -Math.PI/2 + c.serveDwell * Math.PI*2);
+                        ctx.arc(cx, cy - 80, 55, -Math.PI / 2, -Math.PI / 2 + c.serveDwell * Math.PI * 2);
                         ctx.strokeStyle = '#2ecc71';
                         ctx.lineWidth = 6;
                         ctx.stroke();
@@ -1776,7 +1795,7 @@
                     ctx.fillRect(cx - 50, cy + 130, 100, 10);
                     ctx.fillStyle = c.patience > 50 ? '#2ecc71' : '#e74c3c';
                     ctx.fillRect(cx - 50, cy + 130, c.patience, 10);
-                    
+
                     ctx.restore();
                 }
 
@@ -1785,7 +1804,7 @@
                     for (let i = 1; i < orderingCustomers.length; i++) {
                         let cx = 480 + (i * 150);
                         ctx.fillStyle = 'rgba(127, 140, 141, 0.5)';
-                        ctx.beginPath(); ctx.arc(cx, 300, 40, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(cx, 300, 40, 0, Math.PI * 2); ctx.fill();
                     }
                 }
 
@@ -1795,7 +1814,7 @@
                     ctx.translate(m.body.position.x, m.body.position.y);
                     ctx.rotate(m.body.angle);
                     ctx.fillStyle = '#f1c40f';
-                    ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 4; ctx.stroke();
                     ctx.fillStyle = '#d35400';
                     ctx.font = 'bold 20px Arial';
@@ -1819,161 +1838,107 @@
             }
 
             if (microLocation === 'DINING_ROOM') {
-                // 畫桌子與等餐客人
-                const waitingCustomers = customers.filter(c => c.state === 'WAITING_FOOD');
-                
-                // 畫桌子
+                // 1. 清理桌面邏輯
+                activeHandPositions.forEach(pos => {
+                    tableStates.forEach((state, idx) => {
+                        if (state === 'DIRTY') {
+                            const tablePos = TABLE_POSITIONS[idx];
+                            if (Math.hypot(pos.x - tablePos.x, pos.y - tablePos.y) < 100) {
+                                tableCleanProgress[idx] += 0.8;
+                                if (tableCleanProgress[idx] >= 100) {
+                                    tableStates[idx] = 'FREE'; tableCleanProgress[idx] = 0;
+                                    showTip('✨ 桌面已清理乾淨！');
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // 2. 繪製桌子與內容 (基於 tableStates)
                 for (let i = 0; i < LEVELS[currentLevelIndex].tables; i++) {
                     const pos = TABLE_POSITIONS[i];
-                    ctx.fillStyle = '#7f8c8d';
-                    ctx.fillRect(pos.x - 60, pos.y - 10, 120, 20); // 桌子底座
-                    ctx.fillStyle = '#95a5a6';
-                    ctx.fillRect(pos.x - 50, pos.y - 50, 100, 40); // 桌面
-                }
-
-                waitingCustomers.forEach((c, index) => {
-                    const pos = TABLE_POSITIONS[index];
-                    if (!pos) return;
+                    const state = tableStates[i];
                     
-                    let cx = pos.x;
-                    let cy = pos.y - 80;
+                    // 桌子基座
+                    ctx.fillStyle = '#7f8c8d'; ctx.fillRect(pos.x - 60, pos.y - 10, 120, 20);
+                    ctx.fillStyle = (state === 'DIRTY') ? '#5d4037' : '#95a5a6';
+                    ctx.fillRect(pos.x - 50, pos.y - 50, 100, 40);
 
-                    ctx.save();
-                    // 畫客人本體
-                    ctx.fillStyle = '#e67e22';
-                    ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI * 2); ctx.fill(); // 頭
-                    ctx.fillRect(cx - 25, cy + 35, 50, 60); // 身體
+                    if (state === 'DIRTY') {
+                        // 髒污視覺與進入提示
+                        ctx.fillStyle = 'rgba(101, 67, 33, 0.6)';
+                        ctx.beginPath(); ctx.arc(pos.x - 20, pos.y - 35, 15, 0, Math.PI * 2); ctx.fill();
+                        
+                        ctx.fillStyle = 'white'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+                        ctx.fillText('停留進入清理', pos.x, pos.y - 70);
+                    } else if (state === 'OCCUPIED' || state === 'EATING') {
+                        const c = customers.find(cust => cust.tableIndex === i);
+                        if (c) {
+                            let cx = pos.x; let cy = pos.y - 80;
+                            ctx.save();
+                            ctx.fillStyle = (state === 'EATING') ? '#d35400' : '#e67e22';
+                            ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI * 2); ctx.fill();
+                            ctx.fillRect(cx - 25, cy + 35, 50, 60);
 
-                    // 等餐提示
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 16px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('⌛ 等餐中', cx, cy - 60);
+                            ctx.fillStyle = 'white'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
+                            ctx.fillText(state === 'EATING' ? '😋 用餐中' : '⌛ 等餐中', cx, cy - 60);
 
-                    // 耐心條
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(cx - 30, cy + 100, 60, 6);
-                    ctx.fillStyle = c.patience > 50 ? '#2ecc71' : '#e74c3c';
-                    ctx.fillRect(cx - 30, cy + 100, (c.patience / 100) * 60, 6);
-                    ctx.restore();
-                });
-
-                // 畫出原本的打掃桌子背景 (如果有的話，這裡可以微調)
-                ctx.fillStyle = 'rgba(139, 69, 19, 0.3)';
-                ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(100, 100, 760, 400, 20);
-                } else {
-                    ctx.rect(100, 100, 760, 400);
-                }
-                ctx.fill();
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = '#5C3A21';
-                ctx.stroke();
-
-                // 畫污漬
-                let remainingStainsCount = 0;
-                stains.forEach(stain => {
-                    if (stain.alpha > 0) {
-                        remainingStainsCount++;
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.arc(stain.x, stain.y, stain.r, 0, Math.PI * 2);
-                        let grad = ctx.createRadialGradient(stain.x, stain.y, 0, stain.x, stain.y, stain.r);
-                        grad.addColorStop(0, `rgba(101, 67, 33, ${stain.alpha})`);
-                        grad.addColorStop(1, `rgba(101, 67, 33, 0)`);
-                        ctx.fillStyle = grad;
-                        ctx.fill();
-                        ctx.restore();
+                            // 狀態條
+                            ctx.fillStyle = '#333'; ctx.fillRect(cx - 30, cy + 100, 60, 6);
+                            if (state === 'OCCUPIED') {
+                                ctx.fillStyle = c.patience > 50 ? '#2ecc71' : '#e74c3c';
+                                ctx.fillRect(cx - 30, cy + 100, (c.patience / 100) * 60, 6);
+                            } else {
+                                ctx.fillStyle = '#3498db';
+                                ctx.fillRect(cx - 30, cy + 100, (c.eatTimer / 300) * 60, 6);
+                            }
+                            ctx.restore();
+                        }
                     }
-                });
+                }
+            }
 
-                // 畫物理垃圾
+            if (microLocation === 'TABLE_CLEANING') {
+                // 畫特寫大桌子
+                ctx.fillStyle = '#7f8c8d'; ctx.fillRect(100, 450, 760, 40); 
+                ctx.fillStyle = '#95a5a6'; ctx.fillRect(100, 150, 760, 300); 
+                
+                if (cleaningSubState === 'WIPE_TABLE') {
+                    // 顯示髒污特寫
+                    ctx.fillStyle = 'rgba(101, 67, 33, 0.4)';
+                    ctx.beginPath(); ctx.arc(300, 250, 60, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(600, 350, 50, 0, Math.PI*2); ctx.fill();
+                    
+                    // 清理進度條
+                    const progress = tableCleanProgress[currentCleaningTable];
+                    ctx.fillStyle = '#333'; ctx.fillRect(280, 100, 400, 20);
+                    ctx.fillStyle = '#f1c40f'; ctx.fillRect(280, 100, (progress/100)*400, 20);
+                    ctx.fillStyle = 'white'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center';
+                    ctx.fillText('在桌面上快速來回擦拭！', 480, 90);
+                } else if (cleaningSubState === 'CLEAR_TRASH') {
+                    ctx.fillStyle = 'white'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'center';
+                    ctx.fillText('請先把桌上的碗盤撥到旁邊！', 480, 90);
+                }
+
+                // 畫出物理垃圾 (特寫畫面)
                 trashBodies.forEach(body => {
                     ctx.save();
-                    ctx.translate(body.position.x, body.position.y);
-                    ctx.rotate(body.angle);
-
+                    ctx.translate(body.position.x, body.position.y); ctx.rotate(body.angle);
                     if (body.label === 'trash_plate') {
-                        ctx.beginPath();
-                        ctx.arc(0, 0, 60, 0, Math.PI * 2);
-                        ctx.fillStyle = '#ecf0f1';
-                        ctx.fill();
-                        ctx.lineWidth = 4;
-                        ctx.strokeStyle = '#bdc3c7';
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.arc(0, 0, 40, 0, Math.PI * 2);
-                        ctx.stroke();
+                        ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI * 2);
+                        ctx.fillStyle = '#ecf0f1'; ctx.fill();
+                        ctx.lineWidth = 4; ctx.strokeStyle = '#bdc3c7'; ctx.stroke();
                     } else if (body.label === 'trash_utensil') {
-                        ctx.fillStyle = '#95a5a6';
-                        ctx.fillRect(-10, -50, 20, 100);
-                        ctx.strokeStyle = '#7f8c8d';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(-10, -50, 20, 100);
+                        // 改變筷子顏色為深木色，與淺色桌面區分
+                        ctx.fillStyle = '#5d4037'; ctx.fillRect(-10, -50, 20, 100);
                     } else if (body.label === 'trash_cup') {
-                        ctx.fillStyle = '#e74c3c';
-                        ctx.fillRect(-20, -35, 40, 70);
-                        ctx.strokeStyle = '#c0392b';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(-20, -35, 40, 70);
-                        ctx.fillStyle = 'white';
-                        ctx.fillRect(-15, -10, 30, 20);
-                    } else {
-                        ctx.beginPath();
-                        for (let i = 0; i < 8; i++) {
-                            let a = i * Math.PI / 4;
-                            let r = 20 + Math.random() * 10;
-                            if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
-                            else ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
-                        }
-                        ctx.closePath();
-                        ctx.fillStyle = '#ecf0f1';
-                        ctx.fill();
-                        ctx.lineWidth = 2;
-                        ctx.strokeStyle = '#bdc3c7';
-                        ctx.stroke();
+                        ctx.fillStyle = '#e74c3c'; ctx.fillRect(-20, -35, 40, 70);
                     }
                     ctx.restore();
                 });
-
-                // 狀態文字提示
-                if (cleaningSubState === 'INIT') {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 48px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('開始整理桌子！', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-                    ctx.textAlign = 'left';
-                } else if (cleaningSubState === 'TRANSITION') {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-                    ctx.fillStyle = '#f1c40f';
-                    ctx.font = 'bold 48px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('垃圾清理完畢，開始擦桌子！', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-                    ctx.textAlign = 'left';
-                } else if (cleaningSubState === 'WIPE_TABLE' && remainingStainsCount === 0) {
-                    ctx.fillStyle = '#2ecc71';
-                    ctx.font = 'bold 48px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = 'black';
-                    ctx.fillText('✨ 完成清潔 ✨', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-                    ctx.textAlign = 'left';
-                    ctx.shadowBlur = 0;
-                } else {
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                    ctx.font = 'bold 24px Arial';
-                    ctx.textAlign = 'center';
-                    if (cleaningSubState === 'CLEAR_TRASH') {
-                        ctx.fillText('將垃圾與餐具撥出桌子邊緣', GAME_WIDTH / 2, GAME_HEIGHT - 20);
-                    } else if (cleaningSubState === 'WIPE_TABLE') {
-                        ctx.fillText('用雙手海綿擦拭桌面污漬', GAME_WIDTH / 2, GAME_HEIGHT - 20);
-                    }
-                    ctx.textAlign = 'left';
-                }
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'left';
+                ctx.fillText('⬅️ 停留左上角返回', 20, 40);
             }
 
             if (microLocation === 'KITCHEN') {
@@ -2000,13 +1965,13 @@
                     ctx.shadowBlur = 4;
                     ctx.shadowColor = 'black';
                     ctx.fillText('在盤子上快速來回搓洗！', washingPlate.x + 150, washingPlate.y - 40);
-                    
+
                     // 顯示進度百分比
                     const progress = Math.floor(Math.min(100, (scrubAccumulator / SCRUB_THRESHOLD) * 100));
                     ctx.fillStyle = '#f1c40f';
                     ctx.font = 'bold 32px Arial';
                     ctx.fillText(`洗滌進度: ${progress}%`, washingPlate.x + 150, washingPlate.y - 10);
-                    
+
                     ctx.textAlign = 'left';
                     ctx.shadowBlur = 0;
                 } else {
@@ -2055,13 +2020,13 @@
                     key: 'COUNTER', show: allowedTargets.includes('COUNTER'),
                     cx: GAME_WIDTH / 2, cy: 55, label: '櫃檯',
                     labelX: GAME_WIDTH / 2 - 20, labelY: 110,
-                    draw: () => { 
+                    draw: () => {
                         if (microLocation === 'KITCHEN') {
                             // 廚房回櫃檯是向右
-                            ctx.moveTo(GAME_WIDTH - 30, GAME_HEIGHT/2); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT/2 - 40); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT/2 + 40);
+                            ctx.moveTo(GAME_WIDTH - 30, GAME_HEIGHT / 2); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 - 40); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 + 40);
                         } else if (microLocation === 'DINING_ROOM') {
                             // 用餐區回櫃檯是向左
-                            ctx.moveTo(30, GAME_HEIGHT/2); ctx.lineTo(80, GAME_HEIGHT/2 - 40); ctx.lineTo(80, GAME_HEIGHT/2 + 40);
+                            ctx.moveTo(30, GAME_HEIGHT / 2); ctx.lineTo(80, GAME_HEIGHT / 2 - 40); ctx.lineTo(80, GAME_HEIGHT / 2 + 40);
                         } else {
                             // 向上
                             ctx.moveTo(GAME_WIDTH / 2, 30); ctx.lineTo(GAME_WIDTH / 2 - 40, 80); ctx.lineTo(GAME_WIDTH / 2 + 40, 80);
