@@ -419,6 +419,7 @@
         let customers = [];
         let droppedMoney = [];
         let customerSpawnTimer = 0;
+        let nextCustomerImageIndex = 0;
         let negativeReviews = 0; // 負評數量
 
         // 廚房料理系統
@@ -526,6 +527,37 @@
         const levelSelectScreen = document.getElementById('level-select-screen');
         const resultScreen = document.getElementById('result-screen');
         const levelGrid = document.getElementById('level-grid-container');
+
+        // 背景圖片資源
+        const counterBgImg = new Image();
+        counterBgImg.src = 'assets/img/bg/櫃台.png';
+        const customerImageSources = [
+            'assets/img/Picture/客人1.png',
+            'assets/img/Picture/客人2.png',
+            'assets/img/Picture/客人3.png'
+        ];
+        const customerImages = customerImageSources.map(src => {
+            const img = new Image();
+            img.src = src;
+            return img;
+        });
+
+        function drawCustomerImage(customer, x, y, width, height, fallbackColor = '#3498db') {
+            const img = customerImages[customer.customerImageIndex % customerImages.length];
+            if (img && img.complete && img.naturalWidth > 0) {
+                const scale = Math.min(width / img.naturalWidth, height / img.naturalHeight);
+                const drawWidth = img.naturalWidth * scale;
+                const drawHeight = img.naturalHeight * scale;
+                ctx.drawImage(img, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+                return;
+            }
+
+            ctx.fillStyle = fallbackColor;
+            ctx.beginPath();
+            ctx.arc(x, y - height * 0.25, width * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(x - width * 0.22, y, width * 0.44, height * 0.42);
+        }
 
         let faceLandmarker, handLandmarker;
         let lastVideoTime = -1;
@@ -719,6 +751,7 @@
             droppedMoney.forEach(m => World.remove(world, m.body));
             droppedMoney = [];
             customerSpawnTimer = 60; // 1秒後生第一位
+            nextCustomerImageIndex = 0;
             negativeReviews = 0;
             reviewDisplay.style.display = 'none';
             reviewDisplay.innerText = '負評: 0';
@@ -1066,6 +1099,7 @@
 
                     customers.push({
                         id: Date.now(),
+                        customerImageIndex: nextCustomerImageIndex,
                         orderType: type,
                         state: 'ORDERING',
                         patience: 100,
@@ -1076,6 +1110,7 @@
                         hasDrink: false,
                         eatTimer: 0
                     });
+                    nextCustomerImageIndex = (nextCustomerImageIndex + 1) % customerImages.length;
                     // 基礎 4 秒生一個 + 每個負評增加 1.5 秒的生成時間
                     customerSpawnTimer = 240 + (negativeReviews * 90);
                 }
@@ -1901,6 +1936,10 @@
         }
 
         function renderGame() {
+            if (microLocation === 'COUNTER') {
+                ctx.drawImage(counterBgImg, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+            }
+
             // 切換空間導航按鈕 (僅在 GAMEPLAY 顯示，之後會換成手勢觸發)
             drawNavigationArrows();
 
@@ -1914,9 +1953,7 @@
 
                     ctx.save();
                     // 畫客人本體
-                    ctx.fillStyle = '#3498db';
-                    ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI * 2); ctx.fill(); // 頭
-                    ctx.fillRect(cx - 30, cy + 40, 60, 80); // 身體
+                    drawCustomerImage(c, cx, cy + 40, 150, 230);
 
                     // 點餐氣泡
                     ctx.fillStyle = 'white';
@@ -1947,9 +1984,11 @@
                 // 畫後面的排隊者 (簡化顯示)
                 if (orderingCustomers.length > 1) {
                     for (let i = 1; i < orderingCustomers.length; i++) {
+                        const c = orderingCustomers[i];
                         let cx = 480 + (i * 150);
-                        ctx.fillStyle = 'rgba(127, 140, 141, 0.5)';
-                        ctx.beginPath(); ctx.arc(cx, 300, 40, 0, Math.PI * 2); ctx.fill();
+                        ctx.globalAlpha = 0.55;
+                        drawCustomerImage(c, cx, 340, 95, 145, '#7f8c8d');
+                        ctx.globalAlpha = 1;
                     }
                 }
 
@@ -2005,9 +2044,7 @@
                         if (c) {
                             let cx = pos.x; let cy = pos.y - 80;
                             ctx.save();
-                            ctx.fillStyle = (state === 'EATING') ? '#d35400' : '#e67e22';
-                            ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI * 2); ctx.fill();
-                            ctx.fillRect(cx - 25, cy + 35, 50, 60);
+                            drawCustomerImage(c, cx, cy + 25, 95, 145, state === 'EATING' ? '#d35400' : '#e67e22');
 
                             ctx.fillStyle = 'white'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
                             ctx.fillText(state === 'EATING' ? '😋 用餐中' : '⌛ 等餐中', cx, cy - 60);
