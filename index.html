@@ -369,6 +369,8 @@
             <div style="display: flex; gap: 20px;">
                 <button class="btn" onclick="changeMacroState('LEVEL_SELECT')"
                     style="background:#3498db; box-shadow: 0 4px 0 #2980b9;">回關卡選單</button>
+                <button class="btn" id="btn-restart-level" onclick="restartCurrentLevel()" 
+                    style="background:#e67e22; box-shadow: 0 4px 0 #d35400;">重新開始</button>
                 <button class="btn" id="btn-next-level" onclick="startNextLevel()" style="display:none;">下一關</button>
             </div>
         </div>
@@ -684,20 +686,15 @@
                     });
                 }
             } else if (macroState === 'LEVEL_RESULT') {
-                const backBtn = resultScreen.querySelector('.btn');
-                if (backBtn) {
-                    registeredUiElements.push({
-                        el: backBtn,
-                        action: () => backBtn.click()
-                    });
-                }
-                const nextBtn = document.getElementById('btn-next-level');
-                if (nextBtn && nextBtn.style.display !== 'none') {
-                    registeredUiElements.push({
-                        el: nextBtn,
-                        action: () => nextBtn.click()
-                    });
-                }
+                const btns = resultScreen.querySelectorAll('.btn');
+                btns.forEach(btn => {
+                    if (btn.style.display !== 'none') {
+                        registeredUiElements.push({
+                            el: btn,
+                            action: () => btn.click()
+                        });
+                    }
+                });
             }
 
             registeredUiElements.forEach(item => {
@@ -801,6 +798,10 @@
 
         window.startNextLevel = function () {
             currentLevelIndex++;
+            changeMacroState('GAMEPLAY');
+        };
+
+        window.restartCurrentLevel = function () {
             changeMacroState('GAMEPLAY');
         };
 
