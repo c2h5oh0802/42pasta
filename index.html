@@ -1525,14 +1525,15 @@
                 const handSide = pos.isRight ? 'right' : 'left';
                 const isFist = pos.isFist;
 
-                // 定義感應區
-                const rawPastaArea = { x: 70, y: 350, w: 120, h: 120 };
-                const potArea = { x: 300, y: 300, w: 150, h: 120 };
-                const plateArea = { x: 750, y: 350, w: 150, h: 100 };
-                const cilantroArea = { x: 70, y: 100, w: 120, h: 120 };
-                const cementArea = { x: 250, y: 100, w: 120, h: 120 };
-                const serveArea = { x: 600, y: 50, w: 200, h: 100 };
-                const shakerArea = { x: 450, y: 100, w: 120, h: 120 }; // 飲料區
+                const {
+                    rawPastaArea,
+                    potArea,
+                    plateArea,
+                    cilantroArea,
+                    cementArea,
+                    serveArea,
+                    shakerArea
+                } = getKitchenLayout();
 
                 // --- 飲料邏輯 ---
                 if (LEVELS[currentLevelIndex].id === 2) {
@@ -1690,12 +1691,15 @@
         }
 
         function drawCookingUI() {
-            const rawPastaArea = { x: 70, y: 350, w: 120, h: 120 };
-            const potArea = { x: 300, y: 300, w: 150, h: 120 };
-            const plateArea = { x: 750, y: 350, w: 150, h: 100 };
-            const cilantroArea = { x: 70, y: 100, w: 120, h: 120 };
-            const cementArea = { x: 250, y: 100, w: 120, h: 120 };
-            const serveArea = { x: 600, y: 50, w: 200, h: 100 };
+            const {
+                rawPastaArea,
+                potArea,
+                plateArea,
+                cilantroArea,
+                cementArea,
+                serveArea,
+                shakerArea
+            } = getKitchenLayout();
 
             ctx.save();
             // 標題與訂單提示
@@ -1837,7 +1841,6 @@
 
             // 飲料區
             if (LEVELS[currentLevelIndex].id === 2) {
-                const shakerArea = { x: 450, y: 100, w: 120, h: 120 };
                 ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
                 ctx.fillRect(shakerArea.x, shakerArea.y, shakerArea.w, shakerArea.h);
                 ctx.strokeStyle = '#2980b9'; ctx.lineWidth = 2;
@@ -1905,6 +1908,18 @@
             } else {
                 lastHandPositions[handType] = null;
             }
+        }
+
+        function getKitchenLayout() {
+            return {
+                rawPastaArea: { x: 810, y: 120, w: 120, h: 120 },
+                cilantroArea: { x: 70, y: 105, w: 120, h: 120 },
+                cementArea: { x: 230, y: 105, w: 120, h: 120 },
+                shakerArea: { x: 230, y: 340, w: 120, h: 120 },
+                plateArea: { x: 405, y: 330, w: 150, h: 110 },
+                potArea: { x: 690, y: 330, w: 160, h: 130 },
+                serveArea: { x: 610, y: 55, w: 220, h: 95 }
+            };
         }
 
         function drawFirstPersonHand(landmarks, isRight, isWipeMode) {
