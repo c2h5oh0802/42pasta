@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 
 <head>
@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>42號義麵店</title>
     <style>
-        /* ?箇??蔭????*/
+        /* ?箇??�蝵�?��???*/
         body,
         html {
             margin: 0;
@@ -19,7 +19,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* ?銝餃捆??*/
+        /* ?���脖蜓摰�??*/
         #game-container {
             position: relative;
             width: 100vw;
@@ -39,42 +39,110 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            /* 靽?瘥?蝮格 */
+            /* 靽��?瘥��?蝮格�� */
             z-index: 10;
+        }
+
+        #hand-canvas {
+            z-index: 160;
+            pointer-events: none;
         }
 
         video {
             display: none;
         }
 
-        /* ??抒???UI 撅?(HUD) */
+        /* ?����?抒???UI 撅?(HUD) */
         #ui-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            width: min(100vw, calc(100vh * 16 / 9));
+            height: min(100vh, calc(100vw * 9 / 16));
+            transform: translate(-50%, -50%);
             z-index: 20;
             pointer-events: none;
-            /* 霈?曌??隞亦忽?銝??HTML/Canvas */
+            /* 霈��?曌��??���臭誑蝛�?���唬�����??HTML/Canvas */
         }
 
         .hud {
             position: absolute;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.75);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-sizing: border-box;
         }
 
         #status-hud {
-            bottom: 80px;
-            /* 蝘餉銝嚗???閮?? */
-            left: 15px;
+            top: 16px;
+            left: 18px;
+            display: none;
+            width: 272px;
+            height: 76px;
+            padding: 14px 18px 13px;
+            color: #fff5d4;
+            background-image: url('assets/img/ui/hud-board-wide.png');
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
+            border: 0;
+            border-radius: 0;
+            box-shadow: 0 12px 18px rgba(0, 0, 0, 0.22);
+            text-shadow: 0 2px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        #status-hud::before,
+        #status-hud::after {
             display: none;
         }
 
-        /* ?身?梯?嚗??脖葉?＊蝷?*/
+        #status-hud::before {
+            left: 8px;
+        }
+
+        #status-hud::after {
+            right: 8px;
+        }
+
+        .hud-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            height: 100%;
+        }
+
+        .hud-stat {
+            min-width: 0;
+            padding: 7px 6px 6px;
+            background: rgba(255, 244, 205, 0.08);
+            border: 1px solid rgba(255, 230, 160, 0.24);
+            border-radius: 4px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13);
+        }
+
+        .hud-label {
+            display: block;
+            color: #e5c58b;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .hud-value {
+            display: block;
+            color: #fff8df;
+            font-size: 22px;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        #time-display {
+            color: #ff705f;
+        }
+
+        #score-display {
+            color: #77e79f;
+        }
+
+        /* ?�閮�?梯?嚗��??脖葉?�憿舐�?*/
         #satisfaction-bar-container {
             width: 220px;
             height: 22px;
@@ -92,7 +160,7 @@
             transition: width 0.1s, background 0.3s;
         }
 
-        /* --- 摰????UI ?Ｘ (HTML 撖虫?) --- */
+        /* --- 摰��??�??UI ?Ｘ�� (HTML 撖虫?) --- */
         .panel-overlay {
             position: absolute;
             top: 0;
@@ -100,7 +168,7 @@
             width: 100%;
             height: 100%;
             background: transparent;
-            /* ?寧??嚗?銝??Canvas ???賡靘?*/
+            /* ?寧��?��?嚗��?銝����??Canvas ?��??賡����箔�?*/
             z-index: 100;
             display: flex;
             flex-direction: column;
@@ -113,7 +181,7 @@
             display: none !important;
         }
 
-        /* 璅??恍 */
+        /* 璅��??恍�� */
         #title-screen {
             overflow: hidden;
         }
@@ -157,7 +225,7 @@
             pointer-events: none;
         }
 
-        /* ??豢??恍 */
+        /* ?����?豢??恍�� */
         #level-select-screen h2 {
             font-size: 48px;
             color: #3498db;
@@ -171,7 +239,7 @@
 
         .level-card {
             background: rgba(44, 62, 80, 0.75);
-            /* ?寧??嚗?敺???Ｙ??靘?*/
+            /* ?寧��?�����?嚗��?敺����?��??Ｙ��?����?���箔�?*/
             border: 2px solid #34495e;
             border-radius: 12px;
             padding: 20px;
@@ -302,39 +370,157 @@
             background-image: none !important;
         }
 
-        /* 蝯??恍 */
+        /* 蝯��??恍�� */
+        #result-screen {
+            align-items: stretch;
+            box-sizing: border-box;
+            justify-content: flex-start;
+            padding: 0;
+            text-shadow: 0 2px 3px rgba(60, 34, 18, 0.35);
+        }
+
+        .result-stage {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: min(100vw, calc(100vh * 16 / 9));
+            height: min(100vh, calc(100vw * 9 / 16));
+            transform: translate(-50%, -50%);
+        }
+
+        .result-board-ui {
+            position: absolute;
+            left: 11.2%;
+            top: 25.5%;
+            width: 35.5%;
+            height: 47.8%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px 18px 15px;
+            color: #4a2414;
+        }
+
         #result-screen h2 {
-            font-size: 48px;
-            margin-bottom: 20px;
+            color: #4a2414;
+            font-size: clamp(26px, 3.2vw, 42px);
+            line-height: 1;
+            margin: 0 0 6px;
+            width: 100%;
+        }
+
+        .result-label {
+            color: #6a3b20;
+            font-size: clamp(15px, 1.5vw, 20px);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-top: 2px;
+            width: 100%;
         }
 
         #result-money {
-            font-size: 48px;
+            font-size: clamp(38px, 4.3vw, 56px);
             color: #2ecc71;
-            margin-bottom: 5px;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 8px;
+            width: 100%;
         }
 
         #result-penalty {
-            font-size: 24px;
-            color: #e74c3c;
-            margin-bottom: 15px;
+            box-sizing: border-box;
+            width: 82%;
+            color: #8f2e22;
+            font-size: clamp(14px, 1.35vw, 18px);
+            font-weight: 900;
+            line-height: 1.15;
+            margin-bottom: 8px;
+            padding: 6px 10px 7px;
+            background: rgba(255, 240, 203, 0.58);
+            border: 2px dashed rgba(112, 61, 28, 0.42);
+            border-radius: 4px;
         }
 
         #result-stars {
-            font-size: 48px;
+            width: 100%;
+            font-size: clamp(34px, 4vw, 50px);
             color: #f1c40f;
-            margin-bottom: 30px;
-            letter-spacing: 5px;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+            -webkit-text-stroke: 1px rgba(95, 46, 19, 0.45);
         }
 
-        /* ?梁??璅?? (HTML ??嚗?靘?曌葫閰行??芯??踵??箸??Ｚ孛?? */
+        .result-actions {
+            display: flex !important;
+            flex-wrap: wrap;
+            gap: 8px;
+            width: 92%;
+            margin-top: auto;
+            padding-bottom: clamp(34px, 4.4vh, 56px);
+            justify-content: center;
+        }
+
+        #result-screen .btn {
+            align-items: center;
+            aspect-ratio: 3 / 1;
+            background-color: transparent !important;
+            background-image: url('assets/img/ui/result-paper-button.png') !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-size: 100% 100% !important;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none !important;
+            color: #4a2414;
+            display: inline-flex;
+            flex: 0 1 30%;
+            font-size: clamp(12px, 1.1vw, 15px);
+            font-weight: 900;
+            justify-content: center;
+            line-height: 1.05;
+            margin: 0;
+            min-width: 0;
+            padding: 8px 20px 10px;
+            text-shadow: 0 1px 0 rgba(255, 245, 216, 0.85);
+            transform: rotate(-1.5deg);
+            white-space: normal;
+        }
+
+        #result-screen .btn:nth-child(2) {
+            transform: rotate(1deg);
+        }
+
+        #result-screen .btn:nth-child(3) {
+            transform: rotate(-0.5deg);
+        }
+
+        #result-screen .btn:hover {
+            background-color: transparent !important;
+            box-shadow: none !important;
+            filter: brightness(1.05) saturate(1.08);
+            transform: translateY(2px) rotate(-1.5deg);
+        }
+
+        #result-screen .btn:nth-child(2):hover {
+            transform: translateY(2px) rotate(1deg);
+        }
+
+        #result-screen .btn:nth-child(3):hover {
+            transform: translateY(2px) rotate(-0.5deg);
+        }
+
+        /* ?梁��?��?璅?? (HTML ?��?嚗��?靘��?曌�皜祈岫�??芯??踵??箸??Ｚ孛?? */
         .btn {
             padding: 15px 40px;
             font-size: 24px;
             font-weight: bold;
             color: white;
             background: rgba(231, 76, 60, 0.85);
-            /* ?寧?? */
+            /* ?寧��?�����? */
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -360,7 +546,7 @@
             box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.9), 0 0 18px rgba(241, 196, 15, 0.6);
         }
 
-        /* Overcooked 憸冽閮 UI */
+        /* Overcooked 憸冽�潸����� UI */
         #order-container {
             position: absolute;
             top: 10px;
@@ -374,21 +560,37 @@
 
         .order-card {
             width: 120px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+            min-height: 138px;
+            box-sizing: border-box;
+            background-color: transparent;
+            background-image: url('assets/img/ui/order-ticket.png');
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
+            border-radius: 0;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25);
+            overflow: visible;
             display: flex;
             flex-direction: column;
             align-items: center;
-            border: 3px solid #fff;
+            border: 0;
+            padding: 14px 10px 13px;
             transition: transform 0.3s;
         }
 
+        .order-card.is-active {
+            filter: drop-shadow(0 0 7px rgba(241, 196, 15, 0.85));
+            transform: translateY(-2px);
+        }
+
         .order-patience-bg {
-            width: 100%;
-            height: 10px;
-            background: #eee;
+            width: 80%;
+            height: 8px;
+            background: rgba(77, 45, 25, 0.24);
+            border: 1px solid rgba(95, 52, 27, 0.25);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-top: 3px;
         }
 
         .order-patience-fill {
@@ -399,39 +601,31 @@
         }
 
         .order-icon {
-            font-size: 40px;
-            margin: 10px 0;
+            font-size: 34px;
+            margin: 8px 0 5px;
         }
 
         .order-type-text {
-            font-size: 14px;
-            color: #333;
-            font-weight: bold;
-            padding-bottom: 5px;
+            font-size: 13px;
+            color: #3d2416;
+            font-weight: 900;
+            padding-bottom: 3px;
+            text-shadow: 0 1px 0 rgba(255, 246, 218, 0.75);
         }
 
         .order-status {
-            font-size: 12px;
-            color: #666;
+            font-size: 11px;
+            color: #6a4a2f;
+            font-weight: 800;
             padding: 2px 0;
-            background: #f1f1f1;
+            background: transparent;
             width: 100%;
             text-align: center;
         }
 
         /* ?文?憿舐內 */
         #plate-display {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 20px;
-            color: white;
-            border: 2px solid white;
-            z-index: 40;
-            display: none;
+            display: block;
         }
     </style>
     <!-- Matter.js -->
@@ -444,62 +638,71 @@
         <div id="loading">載入 MediaPipe 模型與相機中...</div>
         <video id="webcam" width="960" height="540" autoplay playsinline></video>
         <canvas id="game-canvas" width="960" height="540"></canvas>
+        <canvas id="hand-canvas" width="960" height="540"></canvas>
 
-        <!-- 閮 UI 摰孵 -->
+        <!-- 閮���� UI 摰孵�� -->
         <div id="order-container"></div>
 
-        <div id="plate-display">乾淨盤子: <span id="plate-count">2</span></div>
-
-        <!-- ??脰?銝剔? HUD (?桀??梯?嚗脣 GAMEPLAY ?＊蝷? -->
+        <!-- ?����?脰?銝剔? HUD (?桀??梯?嚗���脣�� GAMEPLAY ?�憿舐�? -->
         <div id="ui-layer">
             <div id="status-hud" class="hud" style="display: none;">
-                <div style="font-size: 1.1em;">目標金額: $<span id="target-display">0</span> | 時間: <span id="time-display"
-                        style="color:#e74c3c; font-weight:bold;">0</span>s</div>
-                <div style="font-size: 1.1em; margin-top: 5px;">目前位置: <span id="location-display"
-                        style="font-weight:bold; color:#3498db;">COUNTER (櫃台)</span></div>
-                <div style="margin-top: 5px;">營業額: $<span id="score-display"
-                        style="font-weight:bold; font-size: 1.2em; color:#2ecc71;">0</span>
-                    <span id="review-display"
-                        style="color:#e74c3c; font-size:0.9em; margin-left:10px; display:none;">負評: 0</span>
+                <div class="hud-row">
+                    <div class="hud-stat">
+                        <span class="hud-label">時間</span>
+                        <span class="hud-value"><span id="time-display">0</span>s</span>
+                    </div>
+                    <div class="hud-stat">
+                        <span class="hud-label">營業額</span>
+                        <span class="hud-value">$<span id="score-display">0</span></span>
+                    </div>
+                    <div id="plate-display" class="hud-stat">
+                        <span class="hud-label">乾淨盤子</span>
+                        <span class="hud-value"><span id="plate-count">2</span></span>
+                    </div>
                 </div>
+                <span id="target-display" class="hidden">0</span>
+                <span id="location-display" class="hidden">COUNTER (櫃台)</span>
+                <span id="review-display" class="hidden">負評: 0</span>
             </div>
         </div>
 
-        <!-- 璅??恍 (TITLE) -->
+        <!-- 璅��??恍�� (TITLE) -->
         <div id="title-screen" class="panel-overlay hidden">
             <img id="title-door-image" src="assets/img/bg/標題關門.png" alt="42號義麵店關門標題">
             <div id="title-close-target" onclick="openTitleDoor()" aria-label="CLOSE 掛牌"></div>
             <div id="title-hint">把手放到 CLOSE 掛牌上，準備開店</div>
         </div>
 
-        <!-- ??豢??恍 (LEVEL_SELECT) -->
+        <!-- ?����?豢??恍�� (LEVEL_SELECT) -->
         <div id="level-select-screen" class="panel-overlay hidden">
             <h2>選擇關卡</h2>
             <div class="level-grid" id="level-grid-container">
-                <!-- ??JS ???? -->
+                <!-- ??JS ?��??��? -->
             </div>
             <button class="btn" onclick="changeMacroState('TITLE')"
                 style="margin-top: 40px; background:#7f8c8d; box-shadow: 0 4px 0 #546e7a;">返回標題</button>
         </div>
 
-        <!-- 蝯??恍 (LEVEL_RESULT) -->
+        <!-- 蝯��??恍�� (LEVEL_RESULT) -->
         <div id="result-screen" class="panel-overlay hidden">
-            <h2 id="result-title">關卡結算</h2>
-            <div>總營業額</div>
-            <div id="result-money">$0</div>
-            <div id="result-penalty">負評扣分: -$0</div>
-            <div id="result-stars">☆☆☆</div>
-            <div style="display: flex; gap: 20px;">
-                <button class="btn" onclick="changeMacroState('LEVEL_SELECT')"
-                    style="background:#3498db; box-shadow: 0 4px 0 #2980b9;">回關卡選單</button>
-                <button class="btn" id="btn-restart-level" onclick="restartCurrentLevel()" 
-                    style="background:#e67e22; box-shadow: 0 4px 0 #d35400;">重新開始</button>
-                <button class="btn" id="btn-next-level" onclick="startNextLevel()" style="display:none;">下一關</button>
+            <div class="result-stage">
+                <div class="result-board-ui">
+                    <h2 id="result-title">關卡結算</h2>
+                    <div class="result-label">總營業額</div>
+                    <div id="result-money">$0</div>
+                    <div id="result-penalty">負評扣分: -$0</div>
+                    <div id="result-stars">☆☆☆</div>
+                    <div class="result-actions">
+                        <button class="btn" onclick="changeMacroState('LEVEL_SELECT')">回關卡選單</button>
+                        <button class="btn" id="btn-restart-level" onclick="restartCurrentLevel()">重新開始</button>
+                        <button class="btn" id="btn-next-level" onclick="startNextLevel()" style="display:none;">下一關</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ?日?函???撥?嗅?????-->
+    <!-- ?日��?函??�?�撘�?嗅??��???-->
     <div id="controls">
         <button onclick="setMicroLocation('COUNTER')">切換: 櫃台 (COUNTER)</button>
         <button onclick="setMicroLocation('DINING_ROOM')">切換: 用餐區 (DINING_ROOM)</button>
@@ -517,50 +720,50 @@
             FilesetResolver
         } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
-        // --- ??嗆??????---
+        // --- ?����?嗆??�?��???---
         let macroState = 'LOADING'; // LOADING, TITLE, LEVEL_SELECT, GAMEPLAY, LEVEL_RESULT
         let microLocation = 'COUNTER'; // COUNTER, KITCHEN, DINING_ROOM
 
-        // ?閮剖?
+        // ?���∟身�?
         const LEVELS = [
-            { id: 1, targetMoney: 50, time: 120, tables: 2 },
-            { id: 2, targetMoney: 150, time: 240, tables: 3 }
+            { id: 1, targetMoney: 50, time: 120, tables: 2, initialPlates: 2, maxPlates: 2 },
+            { id: 2, targetMoney: 150, time: 240, tables: 3, initialPlates: 3, maxPlates: 3 }
         ];
         let currentLevelIndex = 0;
         let gameTimer = 0;
         let gameTimerInterval = null;
 
-        // 摮?蝟餌絞 (閮?瘥????擃??嚗?隞?”?芾圾???芷???
+        // 摮��?蝟餌絞 (閮��?瘥��??��??�擃��??���賂�?隞?”?芾圾???芷???
         let saveMemory = {
-            stars: [0, 0] // 撠? LEVEL 1, 2
+            stars: [0, 0] // 撠��? LEVEL 1, 2
         };
 
         const GAME_WIDTH = 960;
         const GAME_HEIGHT = 540;
-        let score = 0; // ?寧?
+        let score = 0; // ?寧��?����
         let isSmiling = false;
         let customers = [];
         let droppedMoney = [];
         let customerSpawnTimer = 0;
         let nextCustomerImageIndex = 0;
-        let negativeReviews = 0; // 鞎??賊?
+        let negativeReviews = 0; // 鞎��??賊?
 
-        // 撱??蝟餌絞
+        // 撱����?��?蝟餌絞
         let activeOrder = null;
         let cookState = 'IDLE'; // IDLE, PUT_PASTA, BOILING, PLATE_PASTA, ADD_CEMENT, ADD_CILANTRO, STIRRING, SERVE
-        let dragItems = { left: null, right: null }; // ?舀????銝??拙?
+        let dragItems = { left: null, right: null }; // ?舀��?��??��?銝��??拙?
         let handOpenUntil = { left: 0, right: 0 };
         let cookProgress = 0;
         let stirProgress = 0;
-        const STIR_THRESHOLD = 1200; // ?芣??曉?
+        const STIR_THRESHOLD = 1200; // ?芣??曉�?
 
-        let washingPlate = { x: 330, y: 120, w: 300, h: 300, dirtAmount: 100 }; // ?游之??蝭? (? 200)
-        let lastHandPositions = { left: null, right: null }; // ??閮???雿蔭
+        let washingPlate = { x: 330, y: 120, w: 300, h: 300, dirtAmount: 100 }; // ?游之?��?蝭��? (?���� 200)
+        let lastHandPositions = { left: null, right: null }; // ?��?閮��??��?雿�蝵�
         let scrubAccumulator = 0;
-        const SCRUB_THRESHOLD = 1000; // ?漲???瑼鳴?頞末瘣?
-        let cleanPlates = 2; // ???文??賊?
-        const MAX_PLATES = 2; // ?憭抒摮??(蝚砌???
-        let dirtyPlates = 0; // ???擃??渡??敺????箇?冽??
+        const SCRUB_THRESHOLD = 1000; // ?�摨�?��??�瑼鳴?頞�憟賣�?
+        let cleanPlates = 2; // ?��??文??賊?
+        const DEFAULT_MAX_PLATES = 2; // 預設最大乾淨盤子數
+        let dirtyPlates = 0; // ?�?��?擃��??渡??���嗅���??��??箇��?冽??����
         let stains = [];
         let trashBodies = [];
         let plateHasNoodles = false;
@@ -574,13 +777,13 @@
         // 憌脫?蝟餌絞 (蝚砌???
         let drinkState = 'IDLE'; // IDLE, SHAKING, READY
         let shakeProgress = 0;
-        const SHAKE_THRESHOLD = 800; // ??蝮賭?蝘駁??
+        const SHAKE_THRESHOLD = 800; // ?��?蝮賭?蝘駁��??
 
         const TABLE_POSITIONS = [
-            { x: 160, y: 315, w: 250, h: 130, customerX: 300, customerY: 315 },
-            { x: 480, y: 315, w: 230, h: 130, customerX: 365, customerY: 315 },
-            { x: 790, y: 315, w: 240, h: 130, customerX: 670, customerY: 315 },
-            { x: 480, y: 315, w: 230, h: 130, customerX: 590, customerY: 315 }
+            { x: 160, y: 315, w: 250, h: 130, customerX: 170, customerY: 315 },
+            { x: 480, y: 315, w: 230, h: 130, customerX: 480, customerY: 315 },
+            { x: 790, y: 315, w: 240, h: 130, customerX: 790, customerY: 315 },
+            { x: 480, y: 315, w: 230, h: 130, customerX: 585, customerY: 315 }
         ];
         let tableStates = ['FREE', 'FREE', 'FREE', 'FREE']; 
         let tableCleanProgress = [0, 0, 0, 0]; 
@@ -588,25 +791,23 @@
         let currentCleaningTable = -1; 
         const CLEANING_TABLE_SURFACE = { x: 100, y: 150, w: 760, h: 300 };
 
-        // 撠???菜葫 (Dwell Navigation)
+        // 撠����?��??菜葫 (Dwell Navigation)
         let hoverTarget = null;
         let hoverStartTime = 0;
-        const HOVER_DWELL_TIME = 800; // 蝮桃??0.8 蝘孛?潘???蝘餃?瘚??
+        const HOVER_DWELL_TIME = 800; // 蝮桃��??0.8 蝘�閫�?潘??��?蝘餃?瘚����??
         function getDynamicNavZones() {
             const zones = {
-                KITCHEN: { x: 0, y: 190, w: 100, h: 160 },
-                COUNTER: { x: 420, y: 0, w: 120, h: 130 },
-                DINING_ROOM: { x: 860, y: 190, w: 100, h: 160 },
-                SINK: { x: 420, y: 440, w: 120, h: 100 }
+                KITCHEN: { x: 25, y: 410, w: 150, h: 105 },
+                COUNTER: { x: 420, y: 25, w: 120, h: 130 },
+                DINING_ROOM: { x: 785, y: 410, w: 150, h: 105 },
+                SINK: { x: 390, y: 430, w: 180, h: 90 }
             };
 
-            // ?寞??桀?雿蔭隤踵???
             if (microLocation === 'KITCHEN') {
-                zones.COUNTER = { x: 860, y: 190, w: 100, h: 160 }; // 撱??瑼臬??
+                zones.COUNTER = { x: 785, y: 410, w: 150, h: 105 };
+                zones.SINK = { x: 25, y: 410, w: 150, h: 105 };
             } else if (microLocation === 'DINING_ROOM') {
-                // ?券????瑼荔?撌血
-                zones.COUNTER = { x: 0, y: 190, w: 100, h: 160 };
-                // 擃?摮???嚗???摮擃?嚗????脣?孵神????
+                zones.COUNTER = { x: 25, y: 410, w: 150, h: 105 };
                 tableStates.forEach((state, idx) => {
                     if (state === 'DIRTY' && idx < LEVELS[currentLevelIndex].tables) {
                         const pos = TABLE_POSITIONS[idx];
@@ -619,11 +820,9 @@
                     }
                 });
             } else if (microLocation === 'SINK') {
-                // 瘣??啣?撱嚗椰??(?郊閬死蝘餃?)
-                zones.KITCHEN = { x: 0, y: 190, w: 100, h: 160 };
+                zones.KITCHEN = { x: 25, y: 410, w: 150, h: 105 };
             } else if (microLocation === 'TABLE_CLEANING') {
-                // 敺撖怎?Ｗ??券??
-                zones.DINING_ROOM = { x: 0, y: 0, w: 100, h: 100 }; // 撌虫?閫???
+                zones.DINING_ROOM = { x: 0, y: 0, w: 100, h: 100 };
             }
             return zones;
         }
@@ -635,6 +834,7 @@
         let uiHoverStartTime = 0;
         let uiDwellProgress = 0;
         let uiDwellCooldown = 0;
+        let uiDwellHandSide = null;
         const UI_DWELL_TIME = 1200;
         const UI_COOLDOWN_TIME = 800;
         let registeredUiElements = [];
@@ -642,6 +842,8 @@
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
+        const handCanvas = document.getElementById('hand-canvas');
+        const handCtx = handCanvas.getContext('2d');
         const loadingEl = document.getElementById('loading');
         const stateDisplay = document.getElementById('location-display');
         const scoreDisplay = document.getElementById('score-display');
@@ -653,7 +855,7 @@
         const plateCountEl = document.getElementById('plate-count');
         const orderContainer = document.getElementById('order-container');
 
-        // UI ?恍??
+        // UI ?恍��?��?
         const titleScreen = document.getElementById('title-screen');
         const titleDoorImage = document.getElementById('title-door-image');
         const titleCloseTarget = document.getElementById('title-close-target');
@@ -664,11 +866,22 @@
         let isTitleDoorOpening = false;
         let titleDoorTimer = null;
 
-        // ???鞈?
+        // ?����?��?鞈��?
         const counterBgImg = new Image();
         counterBgImg.src = 'assets/img/bg/櫃台.png';
         const levelSelectBgImg = new Image();
         levelSelectBgImg.src = 'assets/img/bg/選關菜單.png';
+        const resultBgImg = new Image();
+        resultBgImg.src = 'assets/img/bg/結算.png';
+        const actionBannerImg = new Image();
+        actionBannerImg.src = 'assets/img/ui/action-banner.png';
+        const navArrowImg = new Image();
+        navArrowImg.src = 'assets/img/ui/nav-arrow-left.png';
+        const flameImages = ['flame-1.png', 'flame-2.png'].map(name => {
+            const img = new Image();
+            img.src = `assets/img/effects/${name}`;
+            return img;
+        });
         const kitchenBgImg = new Image();
         kitchenBgImg.src = 'assets/img/bg/廚房.png';
         const diningRoomBgImg = new Image();
@@ -703,6 +916,9 @@
             tissueBall: 'assets/img/items/tissue-ball.png',
             pot: 'assets/img/items/pot.png',
             plate: 'assets/img/items/plate.png',
+            cleaningRag: 'assets/img/items/cleaning-rag.png',
+            dishSponge: 'assets/img/items/dish-sponge.png',
+            reservedSign: 'assets/img/items/reserved-sign.png',
             finishedPlateCement: 'assets/img/items/混泥土麵.png',
             finishedPlateCilantro: 'assets/img/items/香菜麵.png',
             finishedPlateCementCilantro: 'assets/img/items/混泥土香菜麵.png',
@@ -713,6 +929,48 @@
             img.src = src;
             return [key, img];
         }));
+        const soundSources = {
+            uiClick: 'assets/sound/ui-click.wav',
+            customerPop: 'assets/sound/customer-pop.wav',
+            customerOne: 'assets/sound/客人一.mp3',
+            customerTwo: 'assets/sound/客人2.wav',
+            customerThree: 'assets/sound/客人3.wav',
+            order: 'assets/sound/order.wav',
+            pickup: 'assets/sound/pickup.wav',
+            drop: 'assets/sound/drop.wav',
+            boil: 'assets/sound/boil.wav',
+            stir: 'assets/sound/stir.wav',
+            serve: 'assets/sound/serve.wav',
+            wash: 'assets/sound/wash.wav',
+            clean: 'assets/sound/clean.wav',
+            error: 'assets/sound/error.wav',
+            success: 'assets/sound/success.wav'
+        };
+        const sounds = Object.fromEntries(Object.entries(soundSources).map(([key, src]) => {
+            const audio = new Audio(src);
+            audio.preload = 'auto';
+            return [key, audio];
+        }));
+        const soundLastPlayed = {};
+
+        function playSound(name, volume = 0.7, cooldown = 60) {
+            const base = sounds[name];
+            if (!base) return;
+            const now = Date.now();
+            if (soundLastPlayed[name] && now - soundLastPlayed[name] < cooldown) return;
+            soundLastPlayed[name] = now;
+            const audio = base.cloneNode();
+            audio.volume = volume;
+            audio.play().catch(() => {});
+        }
+
+        function getCustomerVoiceSound(customer) {
+            if (!customer) return 'customerPop';
+            if (customer.customerImageIndex === 0) return 'customerOne';
+            if (customer.customerImageIndex === 1) return 'customerTwo';
+            if (customer.customerImageIndex === 2) return 'customerThree';
+            return 'customerPop';
+        }
 
         function drawCustomerImage(customer, x, y, width, height, fallbackColor = '#3498db') {
             const img = customerImages[customer.customerImageIndex % customerImages.length];
@@ -733,6 +991,10 @@
 
         function isItemHeld(itemName) {
             return dragItems.left === itemName || dragItems.right === itemName;
+        }
+
+        function getMaxPlates() {
+            return LEVELS[currentLevelIndex]?.maxPlates ?? DEFAULT_MAX_PLATES;
         }
 
         function getPlateShortageHint() {
@@ -780,8 +1042,8 @@
                 if (tableStates.some((state, idx) => state === 'DIRTY' && idx < LEVELS[currentLevelIndex].tables)) return '停留在髒桌上開始整理';
             }
             if (microLocation === 'SINK') {
-                if (dirtyPlates <= 0 && cleanPlates < MAX_PLATES) return '先去用餐區整理髒桌';
-                if (cleanPlates < MAX_PLATES) return '快速來回搓洗盤子';
+                if (dirtyPlates <= 0 && cleanPlates < getMaxPlates()) return '先去用餐區整理髒桌';
+                if (cleanPlates < getMaxPlates()) return '快速來回搓洗盤子';
             }
             return '';
         }
@@ -802,12 +1064,12 @@
             return true;
         }
 
-        function drawSpriteCentered(img, width, height, scale = 1) {
+        function drawSpriteCentered(img, width, height, scale = 1, targetCtx = ctx) {
             if (!img || !img.complete || img.naturalWidth <= 0) return false;
             const fitScale = Math.min(width / img.naturalWidth, height / img.naturalHeight) * scale;
             const drawWidth = img.naturalWidth * fitScale;
             const drawHeight = img.naturalHeight * fitScale;
-            ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+            targetCtx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
             return true;
         }
 
@@ -878,7 +1140,7 @@
                     loadingEl.classList.add('hidden');
                     initMatterJs();
                     loadSaveData();
-                    changeMacroState('TITLE'); // 頛摰?嚗脣璅??恍
+                    changeMacroState('TITLE'); // 頛���亙���?嚗���脣�交���??恍��
                     requestAnimationFrame(gameLoop);
                 });
             } catch (err) {
@@ -886,15 +1148,15 @@
             }
         }
 
-        // --- 摮?蝟餌絞 ---
+        // --- 摮��?蝟餌絞 ---
         function loadSaveData() {
             const saved = localStorage.getItem('42PastaSave');
             if (saved) {
                 saveMemory = JSON.parse(saved);
             } else {
-                // ?活?嚗圾?洵銝??
+                // ?�甈�?���抬��閫�?�蝚砌��??
                 saveMemory = { stars: [0, 0, 0] };
-                saveMemory.stars[0] = 0; // 0???舐
+                saveMemory.stars[0] = 0; // 0?��??舐��
             }
         }
         function saveGame() {
@@ -904,19 +1166,21 @@
         window.openTitleDoor = function () {
             if (isTitleDoorOpening || macroState !== 'TITLE') return;
             isTitleDoorOpening = true;
+            playSound('uiClick', 0.55, 200);
             titleDoorImage.src = 'assets/img/bg/標題開門.png';
             if (titleHint) titleHint.classList.add('hidden');
             if (titleCloseTarget) titleCloseTarget.classList.remove('hand-hover');
             registeredUiElements = [];
             uiHoverTarget = null;
             uiDwellProgress = 0;
+            uiDwellHandSide = null;
             titleDoorTimer = setTimeout(() => {
                 titleDoorTimer = null;
                 changeMacroState('LEVEL_SELECT');
             }, 1000);
         };
 
-        // --- 摰??????---
+        // --- 摰��??�?��???---
         window.changeMacroState = function (newState) {
             macroState = newState;
             if (titleDoorTimer && newState !== 'TITLE') {
@@ -927,7 +1191,7 @@
             levelSelectScreen.classList.add('hidden');
             resultScreen.classList.add('hidden');
             statusHud.style.display = 'none';
-            orderContainer.innerHTML = ''; // 瘥活??????蝛箄??桀???踹?畾??啁?蝞??
+            orderContainer.innerHTML = ''; // 瘥�甈�?��??�?����?��?蝛箄??桀��?��??踹?畾��??啁?蝞����??
 
             if (newState === 'TITLE') {
                 isTitleDoorOpening = false;
@@ -952,7 +1216,7 @@
             updateUiTargets();
         };
 
-        // --- ??豢???憪? ---
+        // --- ?����?豢??��?憪��? ---
         function buildLevelSelectUI() {
             levelGrid.innerHTML = '';
             const backButton = levelSelectScreen.querySelector('.btn');
@@ -1039,17 +1303,17 @@
             negativeReviews = 0;
             reviewDisplay.style.display = 'none';
             reviewDisplay.innerText = '負評: 0';
-            cleanPlates = 2;
+            cleanPlates = levelData.initialPlates ?? getMaxPlates();
             dirtyPlates = 0;
             plateCountEl.innerText = cleanPlates;
 
-            // --- ?蔭獢????---
+            // --- ?�蝵格���??�??---
             tableStates = ['FREE', 'FREE', 'FREE', 'FREE'];
             tableCleanProgress = [0, 0, 0, 0];
             tableHasDrink = [false, false, false, false];
             currentCleaningTable = -1;
 
-            // --- ?蔭撱???---
+            // --- ?�蝵桀�����?�??---
             activeOrder = null;
             cookState = 'IDLE';
             dragItems = { left: null, right: null };
@@ -1060,12 +1324,12 @@
             scrubAccumulator = 0;
             if (washingPlate) washingPlate.dirtAmount = 0;
 
-            // --- ?蔭?拍?? (Matter.js) ---
+            // --- ?�蝵�?拍??���� (Matter.js) ---
             if (typeof trashBodies !== 'undefined') {
                 trashBodies.forEach(body => World.remove(world, body));
                 trashBodies = [];
             }
-            // --- ?蔭憌脫????---
+            // --- ?�蝵桅ㄡ�??�??---
             drinkState = 'IDLE';
             shakeProgress = 0;
 
@@ -1073,7 +1337,7 @@
 
             setMicroLocation('COUNTER'); 
 
-            // ???閮???
+            // ?��??���貉���???
             if (gameTimerInterval) clearInterval(gameTimerInterval);
             gameTimerInterval = setInterval(() => {
                 if (macroState === 'GAMEPLAY') {
@@ -1089,13 +1353,13 @@
 
         function showResultScreen() {
             const levelData = LEVELS[currentLevelIndex];
-            const penalty = negativeReviews * 15; // 瘥?閰 15 ??
+            const penalty = negativeReviews * 15; // 瘥�����?閰���� 15 ??
             const finalScore = Math.max(0, score - penalty);
 
             document.getElementById('result-money').innerText = `$${score}`;
             document.getElementById('result-penalty').innerText = `負評扣分: -$${penalty} (${negativeReviews} 則)`;
 
-            // 閮??? (靘????敺??蝯???
+            // 閮��??��? (靘��????敺��??�蝯��???
             let earnedStars = 0;
             if (finalScore >= levelData.targetMoney * 1.5) earnedStars = 3;
             else if (finalScore >= levelData.targetMoney) earnedStars = 2;
@@ -1105,13 +1369,13 @@
             for (let i = 0; i < 3; i++) starDisplay += (i < earnedStars) ? '★' : '☆';
             document.getElementById('result-stars').innerText = starDisplay;
 
-            // 摮??湔
+            // 摮��??湔��
             if (earnedStars > saveMemory.stars[currentLevelIndex]) {
                 saveMemory.stars[currentLevelIndex] = earnedStars;
                 saveGame();
             }
 
-            // ?斗?臬憿舐內銝?????(??銝???踹2?誑銝?
+            // ?斗��?臬�阡＊蝷箔���??��???(?��?銝�?��??踹��2?�隞乩�?
             const nextBtn = document.getElementById('btn-next-level');
             if (currentLevelIndex < LEVELS.length - 1 && earnedStars >= 2) {
                 nextBtn.style.display = 'inline-block';
@@ -1132,11 +1396,11 @@
             changeMacroState('GAMEPLAY');
         };
 
-        // --- 敺株?蝛粹??? (Micro Location) ---
+        // --- 敺株?蝛粹??��? (Micro Location) ---
         window.setMicroLocation = function (loc, tableIdx = -1) {
             if (macroState !== 'GAMEPLAY') return;
 
-            // ?ａ??征??皜?
+            // ?ａ??�蝛�?��?皜��?
             if (microLocation === 'COUNTER') {
                 droppedMoney.forEach(m => World.remove(world, m.body));
                 droppedMoney = [];
@@ -1147,8 +1411,8 @@
             currentCleaningTable = tableIdx;
 
             if (loc === 'SINK') {
-                if (cleanPlates < MAX_PLATES && dirtyPlates > 0) {
-                    // 憒??桀????文?嚗?????瘣?(dirtAmount=0 銵函內銋?瘣?鈭?
+                if (cleanPlates < getMaxPlates() && dirtyPlates > 0) {
+                    // 憒��??桀??��??文?嚗��??��??��?瘣?(dirtAmount=0 銵函內銋��?瘣��?鈭?
                     if (washingPlate.dirtAmount <= 0) {
                         washingPlate.dirtAmount = 100;
                         scrubAccumulator = 0;
@@ -1160,23 +1424,23 @@
             } else if (loc === 'COUNTER') {
                 droppedMoney.forEach(m => World.add(world, m.body));
             } else if (loc === 'DINING_ROOM') {
-                // 皜??券??銋???瘙隞?
+                // 皜��??券??�銋��??��?瘙���拐�?
                 trashBodies.forEach(b => World.remove(world, b));
                 trashBodies = [];
                 stains = [];
             } else if (loc === 'TABLE_CLEANING') {
-                // ?孵神?脣???Ｙ???隞餃?
+                // ?孵神?脣��?��??Ｙ??��?隞餃?
                 cleaningSubState = 'INIT';
                 setTimeout(() => { cleaningSubState = 'CLEAR_TRASH'; }, 500); 
                 
-                // ?Ｙ?閰脫?摮??
+                // ?Ｙ?閰脫?摮��??����
                 let plate = Bodies.circle(480, 330, 62, { frictionAir: 0.1, label: 'trash_plate', restitution: 0.2 });
                 let fork = Bodies.rectangle(610, 335, 86, 230, { frictionAir: 0.1, label: 'trash_utensil', restitution: 0.2 });
                 
                 let bodies = [plate, fork];
                 let tissue = Bodies.circle(350, 370, 46, { frictionAir: 0.12, label: 'trash_tissue', restitution: 0.25 });
                 bodies.push(tissue);
-                // ?芣??嗉府獢??ㄡ?????摮?
+                // ?芣??嗉府獢��??�憌�?��??��??���臬�?
                 if (tableHasDrink[tableIdx]) {
                     let cup = Bodies.rectangle(725, 360, 40, 70, { frictionAir: 0.1, label: 'trash_cup', restitution: 0.2 });
                     bodies.push(cup);
@@ -1185,7 +1449,7 @@
                 trashBodies.push(...bodies);
                 World.add(world, bodies);
 
-                // ???移皞?剔?擃情暺?
+                // ?��??�蝎暹�����?剔?擃�瘙⊿�?
                 stains = [
                     { x: 300, y: 285, cleaned: false, w: 150, h: 96, angle: -0.2 },
                     { x: 600, y: 380, cleaned: false, w: 135, h: 86, angle: 0.35 },
@@ -1196,7 +1460,7 @@
             }
         };
 
-        // --- Phase 2: ?皛舐?撠 (Dwell Navigation) ---
+        // --- Phase 2: ?���冽趙�?撠���� (Dwell Navigation) ---
         function checkDwellNavigation() {
             if (macroState !== 'GAMEPLAY') return;
             if (Date.now() < dwellCooldown) {
@@ -1217,7 +1481,7 @@
 
             const zones = getDynamicNavZones();
             for (const key in zones) {
-                // ??芾?典?閮梁?蝭?蝘餃?
+                // ?����?芾��?典?閮梁?蝭��?蝘餃?
                 if (allowedTargets.includes(key) || key.startsWith('CLEAN_TABLE_')) {
                     const zone = zones[key];
                     for (const pos of activeHandPositions) {
@@ -1257,28 +1521,30 @@
             }
         }
 
-        // --- 銝駁????詨/蝯??恍嚗??Ｘ趙??雿?---
+        // --- 銝駁��???����?詨��/蝯��??恍�ｇ���??Ｘ趙?��?雿?---
         function checkUiDwellActions() {
             if (macroState === 'GAMEPLAY' || macroState === 'LOADING') return;
             if (Date.now() < uiDwellCooldown) {
                 if (uiHoverTarget) uiHoverTarget.classList.remove('hand-hover');
                 uiHoverTarget = null;
                 uiDwellProgress = 0;
+                uiDwellHandSide = null;
                 return;
             }
 
             let currentTarget = null;
             let currentAction = null;
+            let currentHandSide = null;
 
             for (const item of registeredUiElements) {
                 const rect = item.el.getBoundingClientRect();
                 const canvasRect = canvas.getBoundingClientRect();
 
-                // 閮?蝮格瘥?
+                // 閮��?蝮格�暹���?
                 const scaleX = GAME_WIDTH / canvas.offsetWidth;
                 const scaleY = GAME_HEIGHT / canvas.offsetHeight;
 
-                // 撠?CSS 摨扳?頧??粹??脣?典漣璅?(960x540)
+                // 撠?CSS 摨扳?頧��??粹??脣��?典漣璅?(960x540)
                 const zone = {
                     x: (rect.left - canvasRect.left) * scaleX,
                     y: (rect.top - canvasRect.top) * scaleY,
@@ -1290,6 +1556,7 @@
                         pos.y >= zone.y && pos.y <= zone.y + zone.h) {
                         currentTarget = item.el;
                         currentAction = item.action;
+                        currentHandSide = pos.isRight ? 'right' : 'left';
                         break;
                     }
                 }
@@ -1298,6 +1565,12 @@
 
             if (currentTarget) {
                 if (uiHoverTarget === currentTarget) {
+                    if (uiDwellHandSide !== currentHandSide) {
+                        uiDwellHandSide = currentHandSide;
+                        uiHoverStartTime = Date.now();
+                        uiDwellProgress = 0;
+                        return;
+                    }
                     const elapsed = Date.now() - uiHoverStartTime;
                     uiDwellProgress = Math.min(1, elapsed / UI_DWELL_TIME);
                     if (uiDwellProgress >= 1) {
@@ -1309,12 +1582,14 @@
                         if (uiHoverTarget) uiHoverTarget.classList.remove('hand-hover');
                         uiHoverTarget = null;
                         uiDwellProgress = 0;
+                        uiDwellHandSide = null;
                         uiDwellCooldown = Date.now() + UI_COOLDOWN_TIME;
-                        return; // ?瑁?摰?雿??湔頝喳嚗?? null ??
+                        return; // ?瑁?摰��?雿��??湔�亥歲��綽�����?��? null ?��?
                     }
                 } else {
                     if (uiHoverTarget) uiHoverTarget.classList.remove('hand-hover');
                     uiHoverTarget = currentTarget;
+                    uiDwellHandSide = currentHandSide;
                     uiHoverStartTime = Date.now();
                     uiDwellProgress = 0;
                 }
@@ -1326,6 +1601,7 @@
                 if (uiHoverTarget) uiHoverTarget.classList.remove('hand-hover');
                 uiHoverTarget = null;
                 uiDwellProgress = 0;
+                uiDwellHandSide = null;
             }
         }
 
@@ -1367,50 +1643,52 @@
 
             Engine.update(engine, 1000 / 60);
 
-            // 摰Ｖ犖???摩
+            // 摰Ｖ犖?��??�頛�
             if (macroState === 'GAMEPLAY') {
                 customerSpawnTimer--;
-                // ?ㄐ??customers.length < LEVELS[currentLevelIndex].tables 隞?”??蝛箔???靘摰Ｖ犖??
-                // 蝑?敺?Phase 4嚗???隞嗆??(瑹狗??鈭箸 + ?券??雿?鈭箸) < 蝮賢漣雿
+                // ?�鋆�??customers.length < LEVELS[currentLevelIndex].tables 隞?”?��?蝛箔??��?靘���啣恥鈭�??
+                // 蝑��?敺?Phase 4嚗��??��������?隞嗆��??(瑹�瑼�?��?鈭箸�� + ?券??�雿��?鈭箸��) < 蝮賢漣雿����
                 if (customerSpawnTimer <= 0 && customers.length < LEVELS[currentLevelIndex].tables) {
+                    const spawnedCustomerImageIndex = nextCustomerImageIndex;
                     const rand = Math.random();
                     let type = 'PASTA_NORMAL';
                     if (rand < 0.33) type = 'PASTA_CILANTRO';
                     else if (rand < 0.66) type = 'PASTA_CEMENT';
                     else type = 'PASTA_CEMENT_CILANTRO';
 
-                    // 憌脫??瘙摰?(??蝚砌???
+                    // 憌脫??�瘙���文�?(?��?蝚砌???
                     let wantsDrink = false;
                     if (LEVELS[currentLevelIndex].id === 2) {
-                        wantsDrink = Math.random() < 0.6; // 60% 璈?閬ㄡ??
+                        wantsDrink = Math.random() < 0.6; // 60% 璈��?閬�憌�??
                     }
 
                     customers.push({
                         id: Date.now(),
-                        customerImageIndex: nextCustomerImageIndex,
+                        customerImageIndex: spawnedCustomerImageIndex,
                         orderType: type,
                         state: 'ORDERING',
                         patience: 100,
                         serveDwell: 0,
-                        tableIndex: -1, // 撠?亙漣
+                        tableIndex: -1, // 撠����?亙漣
                         wantsDrink: wantsDrink,
                         hasPasta: false,
                         hasDrink: false,
-                        eatTimer: 0
+                        eatTimer: 0,
+                        counterVoicePlayed: false
                     });
                     nextCustomerImageIndex = (nextCustomerImageIndex + 1) % customerImages.length;
-                    // ?箇? 4 蝘?銝??+ 瘥?閰???1.5 蝘?????
+                    // ?箇? 4 蝘��?銝�??+ 瘥�����?閰��???1.5 蝘��??��??��?
                     customerSpawnTimer = 240 + (negativeReviews * 90);
                 }
                 for (let i = customers.length - 1; i >= 0; i--) {
                     let c = customers[i];
-                    // ?雿?銝?擗?(WAITING_FOOD) ?虜瘥??冽?瑼舫?擗??? (憭批?隤踵)
-                    // 摰Ｖ犖??銝??漲隤踵 (暺?敺?0.04 -> 0.02嚗?擗? 0.01 -> 0.006)
+                    // ?���其���?銝��?擗?(WAITING_FOOD) ?�撣豢���??冽?瑼舫?擗��??��? (憭批?隤踵��)
+                    // 摰Ｖ犖?��?銝��??�摨西矽��� (暺��?敺?0.04 -> 0.02嚗��?擗��? 0.01 -> 0.006)
                     const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.006 : 0.02;
                     c.patience -= patienceLoss;
 
                     if (c.patience <= 0) {
-                        // ... (銋?撌脫?????摩)
+                        // ... (銋��?撌脫??�����??����?�頛�)
                         if (activeOrder && activeOrder.id === c.id) {
                             activeOrder = null; cookState = 'IDLE'; 
                             dragItems.left = dragItems.right = null;
@@ -1431,7 +1709,7 @@
                             if (c.tableIndex !== -1) {
                                 tableStates[c.tableIndex] = 'DIRTY';
                                 tableCleanProgress[c.tableIndex] = 0;
-                                tableHasDrink[c.tableIndex] = c.hasDrink; // 頧宏憌脫?????
+                                tableHasDrink[c.tableIndex] = c.hasDrink; // 頧�蝘駁ㄡ�??����?�??
                             }
                             customers.splice(i, 1);
                         }
@@ -1439,7 +1717,7 @@
                 }
             }
 
-            // 瑼Ｘ??臬鋡急?箇??(?孵神?恍)
+            // 瑼Ｘ��?����?臬�西◤���?箇��??(?孵神?恍��)
             if (microLocation === 'TABLE_CLEANING') {
                 if (cleaningSubState === 'CLEAR_TRASH') {
                     trashBodies = trashBodies.filter(body => {
@@ -1447,7 +1725,7 @@
                         const py = body.position.y;
                         if (isOutsideCleaningTable(px, py)) {
                             World.remove(world, body);
-                            // 蝘駁隞颱?皜?????Ｙ???
+                            // 蝘駁�支遙�?皜��??����?��??Ｙ???
                             return false;
                         }
                         return true;
@@ -1459,14 +1737,16 @@
                 }
             }
 
+            handCtx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
             ctx.save();
             ctx.scale(-1, 1);
             ctx.translate(-GAME_WIDTH, 0);
 
-            // 瘞賊?蝜芾ˊ?蔣璈?霈?桃????賜??唳?
+            // 瘞賊?蝜芾ˊ?�敶望���?霈����?桃??��??賜??唳?
             ctx.drawImage(video, 0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-            // ?寞????瘛梯???
+            // ?寞??�?��?瘛梯???
             ctx.fillStyle = macroState === 'GAMEPLAY' ? 'rgba(10, 15, 20, 0.75)' : 'rgba(10, 15, 20, 0.85)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             ctx.restore();
@@ -1475,32 +1755,34 @@
                 drawCoverImage(titleDoorImage, 0, 0, GAME_WIDTH, GAME_HEIGHT);
             } else if (macroState === 'LEVEL_SELECT' && levelSelectBgImg.complete && levelSelectBgImg.naturalWidth > 0) {
                 drawCoverImage(levelSelectBgImg, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+            } else if (macroState === 'LEVEL_RESULT' && resultBgImg.complete && resultBgImg.naturalWidth > 0) {
+                drawCoverImage(resultBgImg, 0, 0, GAME_WIDTH, GAME_HEIGHT);
             }
 
-            handleHandLogic(); // ?瑁???摩 (UI?文???漣璅?)
+            handleHandLogic(); // ?瑁??����?�頛� (UI?文??����?�摨扳���?)
 
             if (macroState === 'GAMEPLAY') {
-                updateOrderUI(); // ?湔?閮??
+                updateOrderUI(); // ?湔��?���刻�����??
                 handleFaceLogic();
                 renderGame();
             }
 
-            // 瘞賊?蝜芾ˊ蝚砌?鈭箇迂? (銝恣?芸????
+            // 瘞賊?蝜芾ˊ蝚砌?鈭箇迂?���� (銝�蝞�?芸���??����??
+            drawTipOverlay();
+
             if (handResult && handResult.landmarks) {
-                const isWipeMode = (macroState === 'GAMEPLAY' && microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE');
+                const isWipeMode = (macroState === 'GAMEPLAY' && microLocation === 'TABLE_CLEANING' && cleaningSubState === 'WIPE_TABLE');
                 handResult.handednesses.forEach((h, idx) => {
-                    const isRight = h[0].categoryName === 'Left'; // ?∪???
-                    drawFirstPersonHand(handResult.landmarks[idx], isRight, isWipeMode);
+                    const isRight = h[0].categoryName === 'Left'; // ?∪??��?
+                    drawFirstPersonHand(handResult.landmarks[idx], isRight, isWipeMode, handCtx);
                 });
             }
-
-            drawTipOverlay();
 
             requestAnimationFrame(gameLoop);
         }
 
         function handleFaceLogic() {
-            if (microLocation !== 'COUNTER') return; // 銝瑹狗銝摰凝蝚?
+            if (microLocation !== 'COUNTER') return; // 銝���冽��瑼臭����文��敺桃�?
 
             isSmiling = false;
             if (faceResult && faceResult.faceBlendshapes.length > 0) {
@@ -1511,14 +1793,14 @@
             }
 
             if (customers.length > 0) {
-                // 1. 敺桃??亙?摩
+                // 1. 敺桃??亙��?�頛�
                 const orderingCustomer = customers.find(c => c.state === 'ORDERING');
                 if (orderingCustomer) {
-                    // 瑼Ｘ?臬?征獢? (FREE ????函???⊥??貊??)
+                    // 瑼Ｘ��?臬��?�蝛箸���? (FREE ?�?��??函��?��??⊥??貊??����)
                     const freeTableIndex = tableStates.findIndex((s, idx) => s === 'FREE' && idx < LEVELS[currentLevelIndex].tables);
 
                     if (freeTableIndex === -1) {
-                        // 瘝征獢?嚗凝蝚?蝯虫??內
+                        // 瘝�蝛箸���?嚗�敺桃���?蝯虫??�蝷�
                         if (isSmiling) showTip('沒有空桌，請先去用餐區整理桌面');
                         orderingCustomer.serveDwell = 0;
                     } else {
@@ -1534,6 +1816,7 @@
                                 activeOrder = findNextKitchenOrder();
                                 cookState = activeOrder && !activeOrder.hasPasta ? 'PUT_PASTA' : 'IDLE';
                                 showTip('收到訂單，安排到桌位 ' + (freeTableIndex + 1));
+                                playSound('order', 0.65, 300);
                             }
                         } else {
                             orderingCustomer.serveDwell = Math.max(0, orderingCustomer.serveDwell - 0.01);
@@ -1545,14 +1828,14 @@
 
         function checkCustomerDone(c) {
             const needsDrink = c.wantsDrink;
-            // 敹???皛輯雲暻萄?憌脫?(憒??閬?閰?
+            // 敹��??��?皛輯雲暻萄?憌脫?(憒��??�閬��?閰?
             if (c.hasPasta && (!needsDrink || c.hasDrink)) {
                 c.state = 'EATING';
                 c.eatTimer = 0;
                 if (c.tableIndex !== -1) {
                     tableStates[c.tableIndex] = 'EATING';
                 }
-                updateOrderUI(); // 蝡?湔嚗??∠?瘨仃
+                updateOrderUI(); // 蝡����?湔�堆���??∠?瘨�憭�
             }
         }
 
@@ -1593,10 +1876,10 @@
                 return;
             }
 
-            // 瘥??嗅? UI ???賊??恥鈭箸???踹??餌? innerHTML ?遣
+            // 瘥��??嗅? UI ?��??賊??�摰Ｖ犖���?��??踹??餌? innerHTML ?�撱�
             const currentCards = orderContainer.querySelectorAll('.order-card');
 
-            // ?＊蝷粹??券?擗?蝑??恥鈭?
+            // ?�憿舐內�??券?擗��?蝑��??�摰Ｖ�?
             const pendingCustomers = customers.filter(c => c.state === 'ORDERING' || c.state === 'WAITING_FOOD');
             
             let html = '';
@@ -1607,14 +1890,14 @@
                 else if (c.orderType === 'PASTA_CEMENT') typeText = '混泥土麵';
                 else if (c.orderType === 'PASTA_CEMENT_CILANTRO') typeText = '混泥土香菜麵';
 
-                // 憒??ㄡ??瘙??冽?摮??孵?銝?蝷?
+                // 憒��??�憌�?��?瘙��??冽?摮��??孵?銝��?蝷?
                 if (c.wantsDrink) typeText += ' + 飲料';
 
                 const statusText = c.state === 'ORDERING' ? '點餐中' : '等餐中';
                 const color = c.patience > 60 ? '#27ae60' : (c.patience > 30 ? '#f39c12' : '#e74c3c');
 
                 html += `
-                    <div class="order-card" style="border-color: ${index === 0 ? '#f1c40f' : '#fff'}">
+                    <div class="order-card ${index === 0 ? 'is-active' : ''}">
                         <div class="order-patience-bg">
                             <div class="order-patience-fill" style="width: ${c.patience}%; background: ${color}"></div>
                         </div>
@@ -1686,13 +1969,13 @@
                 Body.setPosition(leftHandBody, { x: -100, y: -100 });
             }
 
-            // --- 蝯曹???蝛粹??摩 (靘??園??啁? activeHandPositions) ---
+            // --- 蝯曹??��?蝛粹??�頛� (靘��??園??啁? activeHandPositions) ---
             if (macroState === 'GAMEPLAY') {
                 if (microLocation === 'TABLE_CLEANING') {
-                    // ?孵神?行?摩 (???閫貊)
+                    // ?孵神?行��?�頛� (?��??���航孛���)
                     if (cleaningSubState === 'WIPE_TABLE' && currentCleaningTable !== -1) {
                         activeHandPositions.forEach(pos => {
-                            // 瑼Ｘ?臬蝣啣隞颱?撠皜???瘙?
+                            // 瑼Ｘ��?臬�衣１��唬遙�?撠���芣���??��?瘙?
                             stains.forEach(stain => {
                                 if (!stain.cleaned) {
                                     const hitRadius = Math.max(stain.w, stain.h) * 0.42;
@@ -1704,17 +1987,18 @@
                                 }
                             });
 
-                            // ?寞?撌脫???擃情瘥??湔蝮賡脣漲
+                            // ?寞?撌脫??��?擃�瘙⊥���??湔�啁蜇��脣漲
                             const cleanedCount = stains.filter(s => s.cleaned).length;
                             tableCleanProgress[currentCleaningTable] = (cleanedCount / stains.length) * 100;
 
                             if (tableCleanProgress[currentCleaningTable] >= 100 && cleaningSubState !== 'DONE') {
                                 cleaningSubState = 'DONE';
                                 tableStates[currentCleaningTable] = 'FREE';
-                                dirtyPlates = Math.min(MAX_PLATES, dirtyPlates + 1);
+                                dirtyPlates = Math.min(getMaxPlates(), dirtyPlates + 1);
                                 tableCleanProgress[currentCleaningTable] = 0;
                                 tableHasDrink[currentCleaningTable] = false;
                                 showTip('桌面清好了，髒盤已送到洗手台');
+                                playSound('clean', 0.7, 300);
                                 setTimeout(() => { setMicroLocation('DINING_ROOM'); }, 800);
                             }
                         });
@@ -1723,7 +2007,7 @@
                 if (microLocation === 'SINK') {
                     if (washingPlate.dirtAmount > 0) {
                         handResult.landmarks.forEach((landmarks, idx) => {
-                            // 靽格迤嚗?雿輻?∪????摩嚗eft 璅惜隞?”?恍?喳??
+                            // 靽格迤嚗��?雿輻��?∪??��??�頛荔��Left 璅�蝐支�?”?恍��?喳��?��?
                             const isRight = handResult.handednesses[idx][0].categoryName === 'Left';
                             const palm = landmarks[9];
                             const px = (1 - palm.x) * GAME_WIDTH;
@@ -1733,7 +2017,7 @@
                     }
                 }
                 if (microLocation === 'COUNTER') {
-                    // 蝘駁??Ｗ馳????頛荔?蝣箔??芣??粹?蝯阡
+                    // 蝘駁��?����?Ｗ馳?��??��?頛荔?蝣箔??芣??粹?蝯阡��
                     droppedMoney = [];
                 }
                 checkDwellNavigation();
@@ -1743,7 +2027,7 @@
                 }
             }
 
-            // ?湔?敺?蝵殷?靘漲/雿宏?文?雿輻
+            // ?湔��?�敺��?蝵殷?靘����摨�/雿�蝘�?文?雿輻��
             const currentHandSides = activeHandPositions.map(p => p.isRight ? 'right' : 'left');
             if (!currentHandSides.includes('left')) lastHandPositions.left = null;
             if (!currentHandSides.includes('right')) lastHandPositions.right = null;
@@ -1757,7 +2041,7 @@
         function handleCookingLogic() {
             if (!activeOrder || activeHandPositions.length === 0) return;
 
-            // ?風??皜砍???其?蝵?
+            // ?�甇�?�?���菜葫���?��??其?蝵?
             activeHandPositions.forEach(pos => {
                 const px = pos.x;
                 const py = pos.y;
@@ -1774,7 +2058,7 @@
                     shakerArea
                 } = getKitchenLayout();
 
-                // --- 憌脫??摩 ---
+                // --- 憌脫??�頛� ---
                 if (LEVELS[currentLevelIndex].id === 2) {
                     const drinkTarget = getActiveDrinkTarget();
                     const otherHandSide = handSide === 'right' ? 'left' : 'right';
@@ -1785,10 +2069,11 @@
                         shakeProgress = 0;
                     }
 
-                    if (drinkTarget && !dragItems[handSide] && dragItems[otherHandSide] !== 'SHAKER' && px > shakerArea.x && px < shakerArea.x + shakerArea.w && py > shakerArea.y && py < shakerArea.y + shakerArea.h) {
+                    if (drinkTarget && isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'SHAKER' && px > shakerArea.x && px < shakerArea.x + shakerArea.w && py > shakerArea.y && py < shakerArea.y + shakerArea.h) {
                         if (drinkState === 'IDLE' || drinkState === 'READY') {
                             dragItems[handSide] = 'SHAKER';
-                            if (drinkState === 'READY') drinkState = 'READY'; // 靽?
+                            playSound('pickup', 0.45, 120);
+                            if (drinkState === 'READY') drinkState = 'READY'; // 靽��?
                             else drinkState = 'SHAKING';
                         }
                     }
@@ -1799,8 +2084,10 @@
                             if (lastPos) {
                                 const dist = Math.hypot(px - lastPos.x, py - lastPos.y);
                                 if (dist > 5) shakeProgress += dist;
+                                if (dist > 12) playSound('stir', 0.28, 180);
                                 if (shakeProgress >= SHAKE_THRESHOLD) {
                                     drinkState = 'READY';
+                                    playSound('success', 0.55, 400);
                                 }
                             }
                         }
@@ -1813,6 +2100,7 @@
                                 shakeProgress = 0;
                                 updateScore(10);
                                 showTip('飲料完成，請送給客人');
+                                playSound('serve', 0.6, 300);
                                 checkCustomerDone(drinkTarget);
 
                                 activeOrder = findNextKitchenOrder();
@@ -1822,20 +2110,22 @@
                     }
                 }
 
-                // ???
+                // ?�?��?
                 if (cookState === 'PUT_PASTA' || cookState === 'ASSEMBLY') {
-                    // --- ???摩 ---
+                    // --- ?��??�頛� ---
                     if (potNoodleState === 'EMPTY') {
-                        // 憓????扳炎?伐?憒??虫??餅?撌脩??蹂??熊嚗?甇斗?銝? (?脫迫?澈 BUG)
+                        // 憓��??��??扳炎?伐?憒��??虫??餅?撌脩??蹂??�暻蛛���?甇斗?銝����?���� (?脫迫?�頨� BUG)
                         const otherHandSide = handSide === 'right' ? 'left' : 'right';
                         if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'RAW_PASTA' && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
                             dragItems[handSide] = 'RAW_PASTA';
+                            playSound('pickup', 0.45, 120);
                         }
                         if (dragItems[handSide] === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
                             dragItems[handSide] = null;
                             handOpenUntil[handSide] = Date.now() + 450;
                             potNoodleState = 'BOILING';
                             potCookProgress = 0;
+                            playSound('boil', 0.45, 500);
                         }
                     } else if (potNoodleState === 'BOILING') {
                         potCookProgress += 0.5;
@@ -1847,16 +2137,19 @@
                         if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'COOKED_PASTA' && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
                             dragItems[handSide] = 'COOKED_PASTA';
                             potNoodleState = 'EMPTY';
+                            playSound('pickup', 0.45, 120);
                         }
                     }
 
-                    // --- ?文????摩 ---
+                    // --- ?文??��??�頛� ---
                     const otherHandSide = handSide === 'right' ? 'left' : 'right';
                     if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'CEMENT' && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
                         dragItems[handSide] = 'CEMENT';
+                        playSound('pickup', 0.45, 120);
                     }
                     if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'CILANTRO' && activeOrder.orderType.includes('CILANTRO') && !plateHasCilantro && px > cilantroArea.x && px < cilantroArea.x + cilantroArea.w && py > cilantroArea.y && py < cilantroArea.y + cilantroArea.h) {
                         dragItems[handSide] = 'CILANTRO';
+                        playSound('pickup', 0.45, 120);
                     }
 
                     if (dragItems[handSide] && (dragItems[handSide] === 'COOKED_PASTA' || dragItems[handSide] === 'CEMENT' || dragItems[handSide] === 'CILANTRO') && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
@@ -1866,8 +2159,10 @@
                             if (dragItems[handSide] === 'CILANTRO') plateHasCilantro = true;
                             dragItems[handSide] = null;
                             handOpenUntil[handSide] = Date.now() + 450;
+                            playSound('drop', 0.45, 120);
                         } else {
                             showTip(`沒有乾淨盤子，請${getPlateShortageHint()}`);
+                            playSound('error', 0.45, 400);
                         }
                     }
 
@@ -1884,9 +2179,11 @@
                         if (lastPos) {
                             const dist = Math.hypot(px - lastPos.x, py - lastPos.y);
                             stirProgress += dist;
+                            if (dist > 12) playSound('stir', 0.26, 180);
                             if (stirProgress > STIR_THRESHOLD) {
                                 cookState = 'SERVE';
                                 dragItems[handSide] = null;
+                                playSound('success', 0.65, 400);
                             }
                         }
                         lastHandPositions[handSide] = { x: px, y: py };
@@ -1897,6 +2194,7 @@
                     const otherHandSide = handSide === 'right' ? 'left' : 'right';
                     if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'FINISHED_PLATE' && px > plateArea.x && px < plateArea.x + plateArea.w && py > plateArea.y && py < plateArea.y + plateArea.h) {
                         dragItems[handSide] = 'FINISHED_PLATE';
+                        playSound('pickup', 0.45, 120);
                     }
                     if (dragItems[handSide] === 'FINISHED_PLATE' && px > serveArea.x && px < serveArea.x + serveArea.w && py > serveArea.y && py < serveArea.y + serveArea.h) {
                         if (cleanPlates > 0) {
@@ -1909,9 +2207,11 @@
                                 target.hasPasta = true;
                                 updateScore(25);
                                 showTip('餐點完成，請送到出餐口');
+                                playSound('serve', 0.75, 300);
                                 checkCustomerDone(target);
                             } else {
                                 showTip('目前沒有對應的客人需求');
+                                playSound('error', 0.45, 400);
                             }
 
                             dragItems[handSide] = null;
@@ -1922,6 +2222,7 @@
                             cookState = activeOrder && !activeOrder.hasPasta ? 'PUT_PASTA' : 'IDLE';
                         } else {
                             showTip(`沒有乾淨盤子，請${getPlateShortageHint()}`);
+                            playSound('error', 0.45, 400);
                         }
                     }
                 }
@@ -1938,21 +2239,29 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
+            const drawActionBanner = (x, y, width, height) => {
+                if (actionBannerImg.complete && actionBannerImg.naturalWidth > 0) {
+                    ctx.drawImage(actionBannerImg, x, y, width, height);
+                    return;
+                }
+                ctx.fillStyle = 'rgba(18, 18, 18, 0.82)';
+                ctx.fillRect(x, y, width, height);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.34)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, width, height);
+            };
+
             const hint = getPersistentHint();
             if (hint) {
                 ctx.font = 'bold 24px Arial';
                 const width = Math.min(760, Math.max(320, ctx.measureText(hint).width + 58));
                 const x = GAME_WIDTH / 2 - width / 2;
-                const y = GAME_HEIGHT - 132;
-                ctx.fillStyle = 'rgba(18, 18, 18, 0.82)';
-                ctx.fillRect(x, y, width, 46);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.34)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, width, 46);
+                const y = GAME_HEIGHT - 138;
+                drawActionBanner(x, y, width, 58);
                 ctx.fillStyle = '#fff3a3';
                 ctx.shadowBlur = 8;
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-                ctx.fillText(hint, GAME_WIDTH / 2, y + 24);
+                ctx.fillText(hint, GAME_WIDTH / 2, y + 30);
                 ctx.shadowBlur = 0;
             }
 
@@ -1961,16 +2270,12 @@
                 ctx.font = 'bold 24px Arial';
                 const width = Math.min(760, Math.max(360, ctx.measureText(tipText).width + 64));
                 const x = GAME_WIDTH / 2 - width / 2;
-                const y = 72;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
-                ctx.fillRect(x, y, width, 54);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, width, 54);
+                const y = 68;
+                drawActionBanner(x, y, width, 62);
                 ctx.fillStyle = '#f1c40f';
                 ctx.shadowBlur = 8;
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-                ctx.fillText(tipText, GAME_WIDTH / 2, y + 28);
+                ctx.fillText(tipText, GAME_WIDTH / 2, y + 32);
             }
             ctx.restore();
         }
@@ -1987,47 +2292,25 @@
             } = getKitchenLayout();
 
             ctx.save();
-            // 璅????格?蝷?
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.font = 'bold 28px Arial';
-            if (activeOrder) {
-                const typeName = getOrderTypeName(activeOrder.orderType);
-                ctx.fillText(`訂單: ${typeName}`, 20, 40);
-            } else {
-                ctx.fillText('等待接單...', 20, 40);
-            }
 
-            // ?文??賊?霅血? (?輸??閮)
             if (false && cleanPlates === 0 && !plateHasNoodles) {
                 ctx.fillStyle = '#e74c3c';
                 ctx.font = 'bold 32px Arial';
                 ctx.textAlign = 'center';
                 const pulse = 0.8 + Math.sin(Date.now() / 200) * 0.2;
                 ctx.globalAlpha = pulse;
-                ctx.fillText(`?? 蝻箇摮?${getPlateShortageHint()} ??`, GAME_WIDTH / 2, 180);
+                ctx.fillText(`盤子不足，${getPlateShortageHint()}`, GAME_WIDTH / 2, 180);
                 ctx.globalAlpha = 1.0;
                 ctx.textAlign = 'left';
             }
 
-            let tipTextStr = '';
             ctx.fillStyle = '#f1c40f';
             ctx.font = 'bold 28px Arial';
-            // ???內?寧 drawTipOverlay 蝯曹?蝜芾ˊ?冽?銝惜??
-            // ?怎?暻萄?
-            ctx.fillStyle = 'rgba(18, 18, 18, 0.82)';
-            ctx.fillRect(18, 18, 300, 42);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-            ctx.font = 'bold 22px Arial';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(activeOrder ? `訂單: ${getOrderTypeName(activeOrder.orderType)}` : '等待接單', 34, 40);
-            ctx.textBaseline = 'alphabetic';
 
             if (!isItemHeld('RAW_PASTA')) {
                 drawSpriteInBox(itemImages.rawPasta, rawPastaArea.x, rawPastaArea.y - 8, rawPastaArea.w, rawPastaArea.h + 18, 1.08);
             }
 
-            // 擐??歇?怠?銝??ㄐ?芯????摰???
-            // ?急毽瘜亙??
             if (!isItemHeld('CEMENT')) {
                 drawSpriteInBox(itemImages.cementCan, cementArea.x, cementArea.y - 4, cementArea.w, cementArea.h + 8, 1);
             }
@@ -2035,9 +2318,19 @@
             const potRadius = Math.min(potArea.w, potArea.h) * 0.42;
             const potCx = potArea.x + potArea.w / 2;
             const potCy = potArea.y + potArea.h / 2;
+
+            if (potNoodleState === 'BOILING') {
+                const flameFrame = flameImages[Math.floor(Date.now() / 140) % flameImages.length];
+                if (flameFrame && flameFrame.complete && flameFrame.naturalWidth > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.95;
+                    drawSpriteInBox(flameFrame, potArea.x + 42, potArea.y + potArea.h * 0.48, potArea.w - 84, 82, 1.08);
+                    ctx.restore();
+                }
+            }
+
             drawSpriteInBox(itemImages.pot, potArea.x, potArea.y - 8, potArea.w, potArea.h + 16, 1.02);
 
-            // ???摩憿舐內
             if (potNoodleState !== 'EMPTY') {
                 if (potNoodleState === 'BOILING') {
                     ctx.fillStyle = '#e74c3c';
@@ -2047,7 +2340,6 @@
                 }
             }
 
-            // ?怎摮?(憒???瘝??嚗??嗾瘛函摮??舐摮歇?镼選?撠梁?冽?銝?
             const shouldShowPlate = (cleanPlates > 0 || plateHasNoodles || plateHasCement || plateHasCilantro);
             if (dragItems.left !== 'FINISHED_PLATE' && dragItems.right !== 'FINISHED_PLATE' && shouldShowPlate) {
                 const plateRadius = Math.min(plateArea.w, plateArea.h) * 0.43;
@@ -2057,21 +2349,18 @@
                     drawSpriteInBox(getFinishedPlateImage(), plateArea.x, plateArea.y, plateArea.w, plateArea.h, 1.12);
                 } else {
                     drawSpriteInBox(itemImages.plate, plateArea.x, plateArea.y, plateArea.w, plateArea.h, 1.08);
-
-                // ?文??批捆??(?寧靘? boolean ?斗)
-                if (plateHasNoodles) {
-                    drawSpriteInBox(itemImages.cookedPasta, plateCx - plateRadius * 0.78, plateCy - plateRadius * 0.62, plateRadius * 1.5, plateRadius * 1.2, 1);
-                }
-                if (plateHasCement) {
-                    drawSpriteInBox(itemImages.cementPortion, plateCx - 48, plateCy - 28, 70, 56, 1);
-                }
+                    if (plateHasNoodles) {
+                        drawSpriteInBox(itemImages.cookedPasta, plateCx - plateRadius * 0.78, plateCy - plateRadius * 0.62, plateRadius * 1.5, plateRadius * 1.2, 1);
+                    }
+                    if (plateHasCement) {
+                        drawSpriteInBox(itemImages.cementPortion, plateCx - 48, plateCy - 28, 70, 56, 1);
+                    }
                     if (plateHasCilantro) {
                         drawSpriteInBox(itemImages.cilantroHandful, plateCx + 8, plateCy - 42, 72, 58, 1);
                     }
                 }
             }
 
-            // ?芣??脣漲??
             if (cookState === 'STIRRING') {
                 ctx.strokeStyle = '#f1c40f';
                 ctx.lineWidth = 6;
@@ -2081,18 +2370,17 @@
                 ctx.stroke();
             }
 
-            // 憌脫??
             if (LEVELS[currentLevelIndex].id === 2) {
-                // 憒??典??唬??芾◤??
                 if (!isShakerHeld()) {
                     drawSpriteInBox(itemImages.shaker, shakerArea.x, shakerArea.y, shakerArea.w, shakerArea.h, 0.95);
                 }
 
-                // 憿舐內???脣漲
                 if (drinkState === 'SHAKING') {
                     const progress = (shakeProgress / SHAKE_THRESHOLD) * 100;
-                    ctx.fillStyle = '#bdc3c7'; ctx.fillRect(shakerArea.x, shakerArea.y + shakerArea.h + 5, shakerArea.w, 10);
-                    ctx.fillStyle = '#3498db'; ctx.fillRect(shakerArea.x, shakerArea.y + shakerArea.h + 5, (progress / 100) * shakerArea.w, 10);
+                    ctx.fillStyle = '#bdc3c7';
+                    ctx.fillRect(shakerArea.x, shakerArea.y + shakerArea.h + 5, shakerArea.w, 10);
+                    ctx.fillStyle = '#3498db';
+                    ctx.fillRect(shakerArea.x, shakerArea.y + shakerArea.h + 5, (progress / 100) * shakerArea.w, 10);
                 }
             }
 
@@ -2105,16 +2393,14 @@
             ctx.fillText(cookState === 'SERVE' ? '送餐口' : '出餐口', serveArea.x + serveArea.w / 2, serveArea.y + serveArea.h / 2 + 8);
             ctx.restore();
 
-            // 蝘駁???桐? dragItem 蝜芾ˊ嚗??drawFirstPersonHand 蝯曹???
-
             ctx.restore();
         }
 
 
         function checkScrubbing(px, py, handType) {
-            if (dirtyPlates <= 0 || cleanPlates >= MAX_PLATES) return;
+            if (dirtyPlates <= 0 || cleanPlates >= getMaxPlates()) return;
 
-            // 雿輻頛祝擛??文?蝭?嚗??拙振摰寞???
+            // 雿輻�刻��撖祇���??文?蝭��?嚗��??拙振摰寞??��?
             const margin = 50;
             if (px > washingPlate.x - margin && px < washingPlate.x + washingPlate.w + margin &&
                 py > washingPlate.y - margin && py < washingPlate.y + washingPlate.h + margin) {
@@ -2122,21 +2408,23 @@
                 const lastPos = lastHandPositions[handType];
                 if (lastPos) {
                     const dist = Math.hypot(px - lastPos.x, py - lastPos.y);
-                    // ?芣?????蝘餅?閮? (??頝唾????炊?歹?靘? > 200px)
+                    // ?芣??��??��?蝘餅?閮��? (?����?���刻歲�??��??�隤�?歹?靘��? > 200px)
                     if (dist < 200) {
                         scrubAccumulator += dist;
                         washingPlate.dirtAmount = 100 - (scrubAccumulator / SCRUB_THRESHOLD) * 100;
+                        if (dist > 8) playSound('wash', 0.32, 170);
                     }
 
                     if (washingPlate.dirtAmount <= 0) {
                         washingPlate.dirtAmount = 0;
                         dirtyPlates = Math.max(0, dirtyPlates - 1);
-                        cleanPlates = Math.min(MAX_PLATES, cleanPlates + 1);
+                        cleanPlates = Math.min(getMaxPlates(), cleanPlates + 1);
                         plateCountEl.innerText = cleanPlates;
-                        // 蝘駁瘣???
+                        playSound('clean', 0.7, 300);
+                        // 蝘駁�斗���??����?����
 
                         scrubAccumulator = 0;
-                        if (cleanPlates < MAX_PLATES && dirtyPlates > 0) {
+                        if (cleanPlates < getMaxPlates() && dirtyPlates > 0) {
                             washingPlate.dirtAmount = 100;
                         }
                     }
@@ -2149,18 +2437,19 @@
 
         function getKitchenLayout() {
             return {
-                rawPastaArea: { x: 780, y: 78, w: 155, h: 150 },
+                rawPastaArea: { x: 790, y: 38, w: 145, h: 145 },
                 cilantroArea: { x: 45, y: 66, w: 175, h: 150 },
                 cementArea: { x: 225, y: 66, w: 170, h: 150 },
-                shakerArea: { x: 155, y: 295, w: 185, h: 145 },
+                shakerArea: { x: 62, y: 220, w: 150, h: 150 },
                 plateArea: { x: 352, y: 222, w: 255, h: 180 },
                 potArea: { x: 690, y: 270, w: 240, h: 168 },
                 serveArea: { x: 450, y: 38, w: 310, h: 95 }
             };
         }
 
-        function drawFirstPersonHand(landmarks, isRight, isWipeMode) {
-            ctx.save();
+        function drawFirstPersonHand(landmarks, isRight, isWipeMode, targetCtx = ctx) {
+            const drawCtx = targetCtx;
+            drawCtx.save();
             const wrist = landmarks[0];
             const middleMCP = landmarks[9];
             const indexMCP = landmarks[5];
@@ -2185,67 +2474,85 @@
             const palmLength = Math.hypot(pxM - pxW, pyM - pyW);
             const handHeight = Math.max(120, Math.min(255, Math.max(palmSpan * 2.7, palmLength * 4.0)));
             const handWidth = handImg.naturalWidth > 0 ? handHeight * (handImg.naturalWidth / handImg.naturalHeight) : handHeight * 0.9;
+            const isScrubMode = microLocation === 'SINK' && washingPlate.dirtAmount > 0 && dirtyPlates > 0 && cleanPlates < getMaxPlates();
 
             if (!isWipeMode && heldItem) {
-                ctx.save();
-                ctx.translate(pxM, pyM);
+                drawCtx.save();
+                drawCtx.translate(pxM, pyM);
                 if (heldItem === 'RAW_PASTA') {
-                    drawSpriteCentered(itemImages.rawPasta, 100, 155, 1);
+                    drawSpriteCentered(itemImages.rawPasta, 100, 155, 1, drawCtx);
                 } else if (heldItem === 'COOKED_PASTA') {
-                    drawSpriteCentered(itemImages.cookedPasta, 128, 104, 1);
+                    drawSpriteCentered(itemImages.cookedPasta, 128, 104, 1, drawCtx);
                 } else if (heldItem === 'CILANTRO') {
-                    drawSpriteCentered(itemImages.cilantroHandful, 118, 96, 1);
+                    drawSpriteCentered(itemImages.cilantroHandful, 118, 96, 1, drawCtx);
                 } else if (heldItem === 'CEMENT') {
-                    drawSpriteCentered(itemImages.cementCan, 192, 264, 1);
+                    drawSpriteCentered(itemImages.cementCan, 192, 264, 1, drawCtx);
                 } else if (heldItem === 'FINISHED_PLATE') {
-                    drawSpriteCentered(getFinishedPlateImage(), 175, 138, 1);
+                    drawSpriteCentered(getFinishedPlateImage(), 175, 138, 1, drawCtx);
                 } else if (heldItem === 'SHAKER') {
-                    drawSpriteCentered(itemImages.shaker, 100, 145, 1);
+                    drawSpriteCentered(itemImages.shaker, 100, 145, 1, drawCtx);
                     if (drinkState === 'SHAKING') {
-                        ctx.fillStyle = 'white'; ctx.font = 'bold 14px Arial';
-                        ctx.fillText('SHAKE!', -25, -40);
+                        drawCtx.fillStyle = 'white'; drawCtx.font = 'bold 14px Arial';
+                        drawCtx.fillText('SHAKE!', -25, -40);
                     }
                 }
-                ctx.restore();
+                drawCtx.restore();
+            }
+
+            if (isWipeMode || isScrubMode) {
+                drawCtx.save();
+                drawCtx.translate(pxM, pyM);
+                drawCtx.rotate(rotation);
+                if ((isFist && !isRight) || (!isFist && isRight)) drawCtx.scale(-1, 1);
+                drawCtx.translate(0, -handHeight * 0.24);
+                drawCtx.rotate(isWipeMode ? -0.18 : 0.08);
+                drawCtx.shadowBlur = 10;
+                drawCtx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+                if (isWipeMode) {
+                    drawSpriteCentered(itemImages.cleaningRag, 230, 170, 1, drawCtx);
+                } else {
+                    drawSpriteCentered(itemImages.dishSponge, 174, 124, 1, drawCtx);
+                }
+                drawCtx.restore();
             }
 
             if (handImg.complete && handImg.naturalWidth > 0) {
-                ctx.save();
-                ctx.translate(pxM, pyM);
-                ctx.rotate(rotation);
-                if ((isFist && !isRight) || (!isFist && isRight)) ctx.scale(-1, 1);
-                ctx.shadowBlur = isWipeMode ? 16 : 10;
-                ctx.shadowColor = isWipeMode ? 'rgba(243, 156, 18, 0.9)' : 'rgba(255, 255, 255, 0.45)';
-                ctx.drawImage(handImg, -handWidth / 2, -handHeight * 0.42, handWidth, handHeight);
-                ctx.restore();
+                drawCtx.save();
+                drawCtx.translate(pxM, pyM);
+                drawCtx.rotate(rotation);
+                if ((isFist && !isRight) || (!isFist && isRight)) drawCtx.scale(-1, 1);
+                drawCtx.shadowBlur = isWipeMode ? 16 : 10;
+                drawCtx.shadowColor = isWipeMode ? 'rgba(243, 156, 18, 0.9)' : 'rgba(255, 255, 255, 0.45)';
+                drawCtx.drawImage(handImg, -handWidth / 2, -handHeight * 0.42, handWidth, handHeight);
+                drawCtx.restore();
             } else {
-                ctx.fillStyle = isFist ? '#f39c12' : '#ffffff';
-                ctx.beginPath();
-                ctx.arc(pxM, pyM, 35, 0, Math.PI * 2);
-                ctx.fill();
+                drawCtx.fillStyle = isFist ? '#f39c12' : '#ffffff';
+                drawCtx.beginPath();
+                drawCtx.arc(pxM, pyM, 35, 0, Math.PI * 2);
+                drawCtx.fill();
             }
 
             // --- 蝜芾ˊ UI 皛舐??脣漲??---
-            if (macroState !== 'GAMEPLAY' && uiDwellProgress > 0) {
+            if (macroState !== 'GAMEPLAY' && uiDwellProgress > 0 && uiDwellHandSide === handSide) {
                 const r = 45;
-                ctx.beginPath();
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-                ctx.lineWidth = 6;
-                ctx.stroke();
+                drawCtx.beginPath();
+                drawCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                drawCtx.lineWidth = 6;
+                drawCtx.stroke();
 
-                ctx.beginPath();
-                ctx.arc(pxM, pyM, r, -Math.PI / 2, -Math.PI / 2 + uiDwellProgress * Math.PI * 2);
+                drawCtx.beginPath();
+                drawCtx.arc(pxM, pyM, r, -Math.PI / 2, -Math.PI / 2 + uiDwellProgress * Math.PI * 2);
                 const ringColor = uiDwellProgress > 0.7 ? '#2ecc71' : '#f1c40f';
-                ctx.strokeStyle = ringColor;
-                ctx.lineWidth = 6;
-                ctx.lineCap = 'round';
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = ringColor;
-                ctx.stroke();
-                ctx.shadowBlur = 0;
+                drawCtx.strokeStyle = ringColor;
+                drawCtx.lineWidth = 6;
+                drawCtx.lineCap = 'round';
+                drawCtx.shadowBlur = 10;
+                drawCtx.shadowColor = ringColor;
+                drawCtx.stroke();
+                drawCtx.shadowBlur = 0;
             }
 
-            ctx.restore();
+            drawCtx.restore();
         }
 
         function renderGame() {
@@ -2261,21 +2568,26 @@
                 drawCoverImage(sinkBgImg, 0, 0, GAME_WIDTH, GAME_HEIGHT);
             }
 
-            // ??蝛粹?撠?? (? GAMEPLAY 憿舐內嚗?敺????閫貊)
+            // ?��?蝛粹?撠����?��? (?���� GAMEPLAY 憿舐內嚗��?敺��??��??���Ｚ孛���)
             drawNavigationArrows();
 
             if (microLocation === 'COUNTER') {
-                // ?怠恥鈭?(?＊蝷箸迤?券?擗?蝚砌?雿?
+                // ?怠恥鈭?(?�憿舐內甇�?券?擗��?蝚砌?雿?
                 const orderingCustomers = customers.filter(c => c.state === 'ORDERING');
                 if (orderingCustomers.length > 0) {
                     const c = orderingCustomers[0];
                     let cx = 480;
                     let cy = 300;
+                    if (!c.counterVoicePlayed) {
+                        const voiceSound = getCustomerVoiceSound(c);
+                        playSound(voiceSound, voiceSound === 'customerPop' ? 0.55 : 0.85, 250);
+                        c.counterVoicePlayed = true;
+                    }
 
                     ctx.save();
                     drawCustomerImage(c, cx, cy + 40, 150, 230);
 
-                    // 暺?瘞?部
+                    // 暺��?瘞?部
                     ctx.fillStyle = 'white';
                     ctx.beginPath(); ctx.arc(cx, cy - 80, 50, 0, Math.PI * 2); ctx.fill();
                     ctx.fillStyle = 'black';
@@ -2283,7 +2595,7 @@
                     ctx.textAlign = 'center';
                     ctx.fillText('🍝', cx, cy - 70);
 
-                    // ?粹?皛舐???(?亙?脣漲)
+                    // ?粹?皛舐???(?亙��?脣漲)
                     if (c.serveDwell > 0) {
                         ctx.beginPath();
                         ctx.arc(cx, cy - 80, 55, -Math.PI / 2, -Math.PI / 2 + c.serveDwell * Math.PI * 2);
@@ -2292,7 +2604,7 @@
                         ctx.stroke();
                     }
 
-                    // ??璇?
+                    // ?��?璇?
                     ctx.fillStyle = '#333';
                     ctx.fillRect(cx - 50, cy + 130, 100, 10);
                     ctx.fillStyle = c.patience > 50 ? '#2ecc71' : '#e74c3c';
@@ -2301,11 +2613,11 @@
                     ctx.restore();
                 }
 
-                // ?怠??Ｙ?????(蝪∪?憿舐內)
+                // ?怠??Ｙ??��???(蝪∪?憿舐內)
                 if (orderingCustomers.length > 1) {
                     for (let i = 1; i < orderingCustomers.length; i++) {
                         const c = orderingCustomers[i];
-                        let cx = 480 + (i * 150);
+                        let cx = Math.max(95, 480 - (i * 130));
                         ctx.globalAlpha = 0.55;
                         drawCustomerImage(c, cx, 340, 95, 145, '#7f8c8d');
                         ctx.globalAlpha = 1;
@@ -2327,29 +2639,23 @@
                     ctx.restore();
                 });
 
-                ctx.fillStyle = 'rgba(255,255,255,0.8)';
-                ctx.font = 'bold 24px Arial';
                 ctx.textAlign = 'left';
-                ctx.fillText('櫃台區：對客人微笑接單', 30, GAME_HEIGHT - 30);
-
-                if (customers.length >= LEVELS[currentLevelIndex].tables) {
-                    ctx.fillStyle = '#e74c3c';
-                    ctx.font = 'bold 32px Arial';
-                    ctx.textAlign = 'right';
-                    ctx.fillText('店內客滿', GAME_WIDTH - 30, GAME_HEIGHT - 30);
-                    ctx.textAlign = 'left';
-                }
             }
 
             if (microLocation === 'DINING_ROOM') {
-                // 1. 蝜芾ˊ獢??摰?(?箸 tableStates)
+                // 1. 蝜芾ˊ獢��??���批�?(?箸�� tableStates)
+                if (LEVELS[currentLevelIndex].id === 1) {
+                    const reservedTable = TABLE_POSITIONS[2];
+                    drawSpriteInBox(itemImages.reservedSign, reservedTable.x - 72, reservedTable.y - 88, 144, 92, 1);
+                }
+
                 for (let i = 0; i < LEVELS[currentLevelIndex].tables; i++) {
                     const pos = TABLE_POSITIONS[i];
                     const state = tableStates[i];
                     
-                    // 獢??箏漣
+                    // 獢��??箏漣
                     if (state === 'DIRTY') {
-                        // 擃情閬死?脣?內
+                        // 擃�瘙∟��閬�?���脣��?�蝷�
                         const zoneX = pos.x - pos.w / 2;
                         const zoneY = pos.y - pos.h / 2;
                         ctx.fillStyle = 'rgba(105, 65, 32, 0.28)';
@@ -2364,20 +2670,21 @@
                         const c = customers.find(cust => cust.tableIndex === i);
                         if (c) {
                             let cx = pos.customerX; let cy = pos.customerY;
+                            const customerDrawY = cy - 64;
                             ctx.save();
-                            drawCustomerImage(c, cx, cy, 90, 138, state === 'EATING' ? '#d35400' : '#e67e22');
+                            drawCustomerImage(c, cx, customerDrawY, 90, 138, state === 'EATING' ? '#d35400' : '#e67e22');
 
                             ctx.fillStyle = 'white'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
 
-                            // ???
+                            // ?�?��?
                             ctx.fillStyle = 'rgba(25, 18, 14, 0.8)';
-                            ctx.fillRect(cx - 32, cy + 70, 64, 8);
+                            ctx.fillRect(cx - 32, customerDrawY + 70, 64, 8);
                             if (state === 'OCCUPIED') {
                                 ctx.fillStyle = c.patience > 50 ? '#2ecc71' : '#e74c3c';
-                                ctx.fillRect(cx - 32, cy + 70, (c.patience / 100) * 64, 8);
+                                ctx.fillRect(cx - 32, customerDrawY + 70, (c.patience / 100) * 64, 8);
                             } else {
                                 ctx.fillStyle = '#3498db';
-                                ctx.fillRect(cx - 32, cy + 70, (c.eatTimer / 300) * 64, 8);
+                                ctx.fillRect(cx - 32, customerDrawY + 70, (c.eatTimer / 300) * 64, 8);
                             }
                             ctx.restore();
                         }
@@ -2386,10 +2693,10 @@
             }
 
             if (microLocation === 'TABLE_CLEANING') {
-                // ?怎撖怠之獢?
-                // ?獢撌脫?箏????ㄐ?芯????情瞍祈??舀?隞嗚?
+                // ?怎�孵神憭扳���?
+                // ?���舀����Ｗ歇���?箏??��??�鋆�?芯??��??�瘙⊥憔�??舀��?���拐辣��?
                 if (cleaningSubState === 'WIPE_TABLE') {
-                    // 憿舐內擃情?孵神 (?＊蝷箏??芣????典?)
+                    // 憿舐內擃�瘙�?孵神 (?�憿舐內�??芣??��??典?)
                     stains.forEach(stain => {
                         if (!stain.cleaned) {
                             ctx.save();
@@ -2400,7 +2707,7 @@
                         }
                     });
                     
-                    // 皜??脣漲璇?
+                    // 皜��??脣漲璇?
                     const progress = tableCleanProgress[currentCleaningTable];
                     ctx.fillStyle = '#333'; ctx.fillRect(280, 100, 400, 20);
                     ctx.fillStyle = '#f1c40f'; ctx.fillRect(280, 100, (progress/100)*400, 20);
@@ -2411,7 +2718,7 @@
                     ctx.fillText('請先把桌上的碗盤撥到旁邊', 480, 90);
                 }
 
-                // ?怠?拍?? (?孵神?恍)
+                // ?怠��?拍??���� (?孵神?恍��)
                 trashBodies.forEach(body => {
                     ctx.save();
                     ctx.translate(body.position.x, body.position.y); ctx.rotate(body.angle);
@@ -2453,12 +2760,12 @@
                     const progress = Math.floor(Math.min(100, (scrubAccumulator / SCRUB_THRESHOLD) * 100));
                     ctx.fillStyle = '#f1c40f';
                     ctx.font = 'bold 32px Arial';
-                    ctx.fillText(`瘣??脣漲: ${progress}%`, washingPlate.x + 150, washingPlate.y - 10);
+                    ctx.fillText(`洗盤進度: ${progress}%`, washingPlate.x + 150, washingPlate.y - 10);
 
                     ctx.textAlign = 'left';
                     ctx.shadowBlur = 0;
                 } else {
-                    if (dirtyPlates <= 0 && cleanPlates < MAX_PLATES) {
+                    if (dirtyPlates <= 0 && cleanPlates < getMaxPlates()) {
                         ctx.fillStyle = '#f1c40f';
                         ctx.font = 'bold 30px Arial';
                         ctx.textAlign = 'center';
@@ -2466,7 +2773,7 @@
                         ctx.font = 'bold 22px Arial';
                         ctx.fillText('整理後才會有盤子可以洗', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 28);
                         ctx.textAlign = 'left';
-                    } else if (cleanPlates < MAX_PLATES) {
+                    } else if (cleanPlates < getMaxPlates()) {
                         // ?思嗾瘛函??文?
                         drawSpriteInBox(itemImages.plate, washingPlate.x, washingPlate.y, washingPlate.w, washingPlate.h, 1.12);
 
@@ -2486,7 +2793,7 @@
             }
         }
 
-        // --- 蝜芾ˊ蝛粹?撠蝞剝 (Phase 2: ?皛舐?閫貊) ---
+        // --- 蝜芾ˊ蝛粹?撠���芰悌��� (Phase 2: ?���冽趙�?閫貊��) ---
         function drawNavigationArrows() {
             let allowedTargets = [];
             if (microLocation === 'COUNTER') allowedTargets = ['KITCHEN', 'DINING_ROOM'];
@@ -2497,56 +2804,109 @@
             const arrowDefs = [
                 {
                     key: 'KITCHEN', show: allowedTargets.includes('KITCHEN'),
-                    cx: 55, cy: GAME_HEIGHT / 2, label: '廚房',
-                    labelX: 30, labelY: GAME_HEIGHT / 2 + 70,
+                    cx: 100, cy: GAME_HEIGHT - 74, label: '廚房',
+                    labelX: 74, labelY: GAME_HEIGHT - 67,
+                    direction: 'left',
                     draw: () => { ctx.moveTo(30, GAME_HEIGHT / 2); ctx.lineTo(80, GAME_HEIGHT / 2 - 40); ctx.lineTo(80, GAME_HEIGHT / 2 + 40); }
                 },
                 {
                     key: 'COUNTER', show: allowedTargets.includes('COUNTER'),
-                    cx: GAME_WIDTH / 2, cy: 55, label: '櫃台',
-                    labelX: GAME_WIDTH / 2 - 20, labelY: 110,
+                    cx: GAME_WIDTH / 2, cy: GAME_HEIGHT - 74, label: '櫃台',
+                    labelX: GAME_WIDTH / 2 - 20, labelY: GAME_HEIGHT - 67,
+                    direction: 'up',
                     draw: () => {
                         if (microLocation === 'KITCHEN') {
-                            // 撱??瑼舀?
+                            // 撱����?��?瑼舀��?����
                             ctx.moveTo(GAME_WIDTH - 30, GAME_HEIGHT / 2); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 - 40); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 + 40);
                         } else if (microLocation === 'DINING_ROOM') {
-                            // ?券????瑼舀?椰
+                            // ?券??�?��?瑼舀��?�撌�
                             ctx.moveTo(30, GAME_HEIGHT / 2); ctx.lineTo(80, GAME_HEIGHT / 2 - 40); ctx.lineTo(80, GAME_HEIGHT / 2 + 40);
                         } else {
-                            // ??
+                            // ?��?
                             ctx.moveTo(GAME_WIDTH / 2, 30); ctx.lineTo(GAME_WIDTH / 2 - 40, 80); ctx.lineTo(GAME_WIDTH / 2 + 40, 80);
                         }
                     }
                 },
                 {
                     key: 'DINING_ROOM', show: allowedTargets.includes('DINING_ROOM'),
-                    cx: GAME_WIDTH - 55, cy: GAME_HEIGHT / 2, label: '用餐區',
-                    labelX: GAME_WIDTH - 80, labelY: GAME_HEIGHT / 2 + 70,
+                    cx: GAME_WIDTH - 100, cy: GAME_HEIGHT - 74, label: '用餐區',
+                    labelX: GAME_WIDTH - 136, labelY: GAME_HEIGHT - 67,
+                    direction: 'right',
                     draw: () => { ctx.moveTo(GAME_WIDTH - 30, GAME_HEIGHT / 2); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 - 40); ctx.lineTo(GAME_WIDTH - 80, GAME_HEIGHT / 2 + 40); }
                 },
                 {
                     key: 'SINK', show: allowedTargets.includes('SINK'),
-                    cx: GAME_WIDTH / 2, cy: GAME_HEIGHT - 45, label: '洗手台',
-                    labelX: GAME_WIDTH / 2 - 30, labelY: GAME_HEIGHT - 85,
+                    cx: GAME_WIDTH / 2, cy: GAME_HEIGHT - 48, label: '洗手台',
+                    labelX: GAME_WIDTH / 2 - 30, labelY: GAME_HEIGHT - 42,
+                    direction: 'down',
                     draw: () => { ctx.moveTo(GAME_WIDTH / 2, GAME_HEIGHT - 30); ctx.lineTo(GAME_WIDTH / 2 - 40, GAME_HEIGHT - 70); ctx.lineTo(GAME_WIDTH / 2 + 40, GAME_HEIGHT - 70); }
                 }
             ];
 
-            // ?寞???嚗耨甇?COUNTER ?其???蝵格??漣璅?蝢?
+            // ?寞??��?嚗�靽格�?COUNTER ?其??��?蝵格??�摨扳���?蝢?
             const counterDef = arrowDefs.find(a => a.key === 'COUNTER');
             if (microLocation === 'KITCHEN') {
-                counterDef.cx = GAME_WIDTH - 55; counterDef.cy = GAME_HEIGHT / 2;
-                counterDef.labelX = GAME_WIDTH - 80; counterDef.labelY = GAME_HEIGHT / 2 + 70;
+                counterDef.cx = GAME_WIDTH - 100; counterDef.cy = GAME_HEIGHT - 74;
+                counterDef.labelX = GAME_WIDTH - 126; counterDef.labelY = GAME_HEIGHT - 67;
+                counterDef.direction = 'right';
+                const sinkDef = arrowDefs.find(a => a.key === 'SINK');
+                sinkDef.cx = 100; sinkDef.cy = GAME_HEIGHT - 74;
+                sinkDef.labelX = 52; sinkDef.labelY = GAME_HEIGHT - 67;
+                sinkDef.direction = 'left';
+                sinkDef.draw = () => { ctx.moveTo(30, GAME_HEIGHT / 2); ctx.lineTo(80, GAME_HEIGHT / 2 - 40); ctx.lineTo(80, GAME_HEIGHT / 2 + 40); };
             } else if (microLocation === 'DINING_ROOM') {
-                counterDef.cx = 55; counterDef.cy = GAME_HEIGHT / 2;
-                counterDef.labelX = 30; counterDef.labelY = GAME_HEIGHT / 2 + 70;
+                counterDef.cx = 100; counterDef.cy = GAME_HEIGHT - 74;
+                counterDef.labelX = 74; counterDef.labelY = GAME_HEIGHT - 67;
+                counterDef.direction = 'left';
             } else if (microLocation === 'SINK') {
-                // 敺?????輻?蝞剝蝘餉撌血嚗?◤?閮??
+                // 敺��??����?��??輻?蝞剝�剔宏��喳椰��湛�����?�鋡�?���刻�����?��?
                 const kitchenDef = arrowDefs.find(a => a.key === 'KITCHEN');
-                kitchenDef.cx = 55; kitchenDef.cy = GAME_HEIGHT / 2;
-                kitchenDef.labelX = 30; kitchenDef.labelY = GAME_HEIGHT / 2 + 70;
+                kitchenDef.cx = 100; kitchenDef.cy = GAME_HEIGHT - 74;
+                kitchenDef.labelX = 74; kitchenDef.labelY = GAME_HEIGHT - 67;
+                kitchenDef.direction = 'left';
                 kitchenDef.draw = () => { ctx.moveTo(30, GAME_HEIGHT / 2); ctx.lineTo(80, GAME_HEIGHT / 2 - 40); ctx.lineTo(80, GAME_HEIGHT / 2 + 40); };
             }
+
+            const drawNavSticker = (arrow, isHovering) => {
+                if (!navArrowImg.complete || navArrowImg.naturalWidth <= 0) return false;
+                const rotation = {
+                    left: 0,
+                    right: Math.PI,
+                    up: Math.PI / 2,
+                    down: -Math.PI / 2
+                }[arrow.direction] || 0;
+                const width = isHovering ? 126 : 112;
+                const height = isHovering ? 72 : 64;
+                const labelOffsets = {
+                    left: { x: 14, y: 2 },
+                    right: { x: -14, y: 2 },
+                    up: { x: 0, y: 10 },
+                    down: { x: 0, y: -10 }
+                };
+                const offset = labelOffsets[arrow.direction] || { x: 0, y: 2 };
+                ctx.save();
+                ctx.translate(arrow.cx, arrow.cy);
+                ctx.rotate(rotation);
+                ctx.globalAlpha = isHovering ? 1 : 0.9;
+                ctx.shadowBlur = isHovering ? 14 : 8;
+                ctx.shadowColor = isHovering ? 'rgba(241, 196, 15, 0.8)' : 'rgba(0, 0, 0, 0.34)';
+                ctx.drawImage(navArrowImg, -width / 2, -height / 2, width, height);
+                ctx.restore();
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = isHovering ? '900 22px Arial' : '900 20px Arial';
+                ctx.fillStyle = isHovering ? '#5a2f16' : '#6a3b20';
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = 'rgba(255, 246, 215, 0.86)';
+                ctx.shadowBlur = 3;
+                ctx.shadowColor = 'rgba(255, 246, 215, 0.72)';
+                ctx.strokeText(arrow.label, arrow.cx + offset.x, arrow.cy + offset.y);
+                ctx.fillText(arrow.label, arrow.cx + offset.x, arrow.cy + offset.y);
+                ctx.restore();
+                return true;
+            };
 
             for (const arrow of arrowDefs) {
                 if (!arrow.show) continue;
@@ -2555,25 +2915,30 @@
                 const isHovering = hoverTarget === arrow.key;
                 const pulse = isHovering ? 0.5 + Math.sin(Date.now() / 200) * 0.2 : 0.2;
 
-                // 蝞剝?祇?
-                ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
-                ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, pulse + 0.3)})`;
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                arrow.draw();
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+                // 蝞剝��?祇?
+                const drewSticker = drawNavSticker(arrow, isHovering);
+                if (!drewSticker) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, pulse + 0.3)})`;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    arrow.draw();
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
 
-                // 璅惜
-                ctx.fillStyle = isHovering ? '#f1c40f' : 'white';
-                ctx.font = isHovering ? 'bold 22px Arial' : '20px Arial';
-                ctx.fillText(arrow.label, arrow.labelX, arrow.labelY);
+                // 璅�蝐�
+                if (!drewSticker) {
+                    ctx.fillStyle = isHovering ? '#f1c40f' : 'white';
+                    ctx.font = isHovering ? 'bold 22px Arial' : '20px Arial';
+                    ctx.fillText(arrow.label, arrow.labelX, arrow.labelY);
+                }
 
                 // 皛舐??脣漲??
                 if (isHovering && dwellProgress > 0) {
                     const r = 48;
-                    // 摨
+                    // 摨����
                     ctx.beginPath();
                     ctx.arc(arrow.cx, arrow.cy, r, 0, Math.PI * 2);
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
@@ -2600,19 +2965,6 @@
 
                 ctx.restore();
             }
-            // 敺桃??菜葫?內??(Debug/????
-            if (isSmiling) {
-                ctx.save();
-                ctx.fillStyle = '#2ecc71';
-                ctx.font = 'bold 20px Arial';
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#2ecc71';
-                const pulse = 1 + Math.sin(Date.now() / 150) * 0.1;
-                ctx.translate(30, GAME_HEIGHT - 160);
-                ctx.scale(pulse, pulse);
-                ctx.fillText('微笑接單中...', 0, 0);
-                ctx.restore();
-            }
         }
 
         function updateScore(delta) {
@@ -2623,14 +2975,14 @@
             } else {
                 scoreDisplay.style.color = '#e74c3c';
             }
-            setTimeout(() => scoreDisplay.style.color = 'white', 500);
+            setTimeout(() => scoreDisplay.style.color = '#77e79f', 500);
         }
 
         function updateReviews() {
             if (negativeReviews > 0) {
                 reviewDisplay.style.display = 'inline-block';
-                reviewDisplay.innerText = `? 鞎?: ${negativeReviews}`;
-                // ???
+                reviewDisplay.innerText = `?�� 鞎��?: ${negativeReviews}`;
+                // ?����?��?
                 reviewDisplay.style.transform = 'scale(1.3)';
                 setTimeout(() => reviewDisplay.style.transform = 'scale(1)', 300);
             }
