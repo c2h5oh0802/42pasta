@@ -300,7 +300,7 @@
             gap: 22px;
             justify-content: center;
             max-width: 760px;
-            transform: none;
+            transform: translateY(18px);
         }
 
         .level-card {
@@ -363,7 +363,7 @@
             border-radius: 6px;
             box-shadow: 0 4px 0 rgba(50, 25, 12, 0.8) !important;
             color: #fff2c2;
-            margin-top: 0 !important;
+            margin-top: 34px !important;
         }
 
         #level-select-screen {
@@ -457,10 +457,10 @@
         .result-actions {
             display: flex !important;
             flex-wrap: wrap;
-            gap: 8px;
-            width: 92%;
-            margin-top: auto;
-            padding-bottom: clamp(34px, 4.4vh, 56px);
+            gap: 12px;
+            width: 100%;
+            margin-top: clamp(16px, 2.2vh, 28px);
+            padding-bottom: 0;
             justify-content: center;
         }
 
@@ -477,14 +477,14 @@
             box-shadow: none !important;
             color: #4a2414;
             display: inline-flex;
-            flex: 0 1 30%;
-            font-size: clamp(12px, 1.1vw, 15px);
+            flex: 0 1 36%;
+            font-size: clamp(15px, 1.35vw, 19px);
             font-weight: 900;
             justify-content: center;
             line-height: 1.05;
             margin: 0;
             min-width: 0;
-            padding: 8px 20px 10px;
+            padding: 11px 24px 13px;
             text-shadow: 0 1px 0 rgba(255, 245, 216, 0.85);
             transform: rotate(-1.5deg);
             white-space: normal;
@@ -553,14 +553,14 @@
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 15px;
+            gap: 10px;
             z-index: 50;
             pointer-events: none;
         }
 
         .order-card {
-            width: 120px;
-            min-height: 138px;
+            width: 92px;
+            min-height: 110px;
             box-sizing: border-box;
             background-color: transparent;
             background-image: url('assets/img/ui/order-ticket.png');
@@ -574,7 +574,7 @@
             flex-direction: column;
             align-items: center;
             border: 0;
-            padding: 14px 10px 13px;
+            padding: 10px 8px 10px;
             transition: transform 0.3s;
         }
 
@@ -585,7 +585,7 @@
 
         .order-patience-bg {
             width: 80%;
-            height: 8px;
+            height: 6px;
             background: rgba(77, 45, 25, 0.24);
             border: 1px solid rgba(95, 52, 27, 0.25);
             border-radius: 99px;
@@ -601,12 +601,12 @@
         }
 
         .order-icon {
-            font-size: 34px;
-            margin: 8px 0 5px;
+            font-size: 26px;
+            margin: 5px 0 3px;
         }
 
         .order-type-text {
-            font-size: 13px;
+            font-size: 11px;
             color: #3d2416;
             font-weight: 900;
             padding-bottom: 3px;
@@ -614,7 +614,7 @@
         }
 
         .order-status {
-            font-size: 11px;
+            font-size: 10px;
             color: #6a4a2f;
             font-weight: 800;
             padding: 2px 0;
@@ -626,6 +626,13 @@
         /* ?文?憿舐內 */
         #plate-display {
             display: block;
+        }
+
+        #btn-restart-level {
+            flex-basis: 36%;
+            min-width: 150px;
+            font-size: clamp(15px, 1.45vw, 19px);
+            padding: 10px 24px 12px;
         }
     </style>
     <!-- Matter.js -->
@@ -694,7 +701,7 @@
                     <div id="result-stars">☆☆☆</div>
                     <div class="result-actions">
                         <button class="btn" onclick="changeMacroState('LEVEL_SELECT')">回關卡選單</button>
-                        <button class="btn" id="btn-restart-level" onclick="restartCurrentLevel()">重新開始</button>
+                        <button class="btn" id="btn-restart-level" onclick="restartCurrentLevel()">再來一次</button>
                         <button class="btn" id="btn-next-level" onclick="startNextLevel()" style="display:none;">下一關</button>
                     </div>
                 </div>
@@ -726,7 +733,7 @@
 
         // ?���∟身�?
         const LEVELS = [
-            { id: 1, targetMoney: 50, time: 120, tables: 2, initialPlates: 2, maxPlates: 2 },
+            { id: 1, targetMoney: 50, time: 120, tables: 3, initialPlates: 3, maxPlates: 3 },
             { id: 2, targetMoney: 150, time: 240, tables: 3, initialPlates: 3, maxPlates: 3 }
         ];
         let currentLevelIndex = 0;
@@ -762,7 +769,7 @@
         let scrubAccumulator = 0;
         const SCRUB_THRESHOLD = 1000; // ?�摨�?��??�瑼鳴?頞�憟賣�?
         let cleanPlates = 2; // ?��??文??賊?
-        const DEFAULT_MAX_PLATES = 2; // 預設最大乾淨盤子數
+        const DEFAULT_MAX_PLATES = 3; // 預設最大乾淨盤子數
         let dirtyPlates = 0; // ?�?��?擃��??渡??���嗅���??��??箇��?冽??����
         let stains = [];
         let trashBodies = [];
@@ -771,6 +778,8 @@
         let plateHasCilantro = false;
         let potNoodleState = 'EMPTY'; // 'EMPTY', 'RAW', 'BOILING', 'READY'
         let potCookProgress = 0;
+        const POT_COUNT = 2;
+        let pots = Array.from({ length: POT_COUNT }, () => ({ state: 'EMPTY', progress: 0 }));
         let tipText = "";
         let tipTimer = 0;
 
@@ -997,6 +1006,28 @@
             return LEVELS[currentLevelIndex]?.maxPlates ?? DEFAULT_MAX_PLATES;
         }
 
+        function resetPots() {
+            pots = Array.from({ length: POT_COUNT }, () => ({ state: 'EMPTY', progress: 0 }));
+            potNoodleState = 'EMPTY';
+            potCookProgress = 0;
+        }
+
+        function updatePots() {
+            pots.forEach((pot) => {
+                if (pot.state === 'BOILING') {
+                    pot.progress = Math.min(100, pot.progress + 0.5);
+                    if (pot.progress >= 100) pot.state = 'READY';
+                }
+            });
+            const firstActivePot = pots.find(pot => pot.state !== 'EMPTY') || pots[0];
+            potNoodleState = firstActivePot?.state ?? 'EMPTY';
+            potCookProgress = firstActivePot?.progress ?? 0;
+        }
+
+        function getPotIndexAt(px, py, potAreas) {
+            return potAreas.findIndex(area => px > area.x && px < area.x + area.w && py > area.y && py < area.y + area.h);
+        }
+
         function getPlateShortageHint() {
             return dirtyPlates > 0 ? '前往洗手台洗盤子' : '先去用餐區整理髒桌';
         }
@@ -1022,9 +1053,9 @@
             if (!activeOrder) return '回櫃台接單';
             if (cleanPlates === 0 && !plateHasNoodles) return getPlateShortageHint();
             if (cookState === 'PUT_PASTA') {
-                if (potNoodleState === 'EMPTY') return '抓一包義麵放進鍋子';
-                if (potNoodleState === 'BOILING') return '等待義麵煮熟';
-                if (potNoodleState === 'READY') return '抓起熟麵放到中央盤子';
+                if (pots.some(pot => pot.state === 'READY')) return '抓起熟麵放到中央盤子';
+                if (pots.some(pot => pot.state === 'EMPTY')) return '抓一包義麵放進鍋子';
+                if (pots.some(pot => pot.state === 'BOILING')) return '等待義麵煮熟';
             }
             if (cookState === 'STIRRING') return '在盤子上畫圈攪拌';
             if (cookState === 'SERVE') return '抓起完成餐點送到出餐口';
@@ -1319,8 +1350,7 @@
             dragItems = { left: null, right: null };
             handOpenUntil = { left: 0, right: 0 };
             plateHasNoodles = plateHasCement = plateHasCilantro = false;
-            potNoodleState = 'EMPTY';
-            potCookProgress = 0;
+            resetPots();
             scrubAccumulator = 0;
             if (washingPlate) washingPlate.dirtAmount = 0;
 
@@ -1674,7 +1704,8 @@
                         hasPasta: false,
                         hasDrink: false,
                         eatTimer: 0,
-                        counterVoicePlayed: false
+                        counterVoicePlayed: false,
+                        counterReminderPlayed: false
                     });
                     nextCustomerImageIndex = (nextCustomerImageIndex + 1) % customerImages.length;
                     // ?箇? 4 蝘��?銝�??+ 瘥�����?閰��???1.5 蝘��??��??��?
@@ -1687,6 +1718,11 @@
                     const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.006 : 0.02;
                     c.patience -= patienceLoss;
 
+                    if (c.state === 'ORDERING' && c.patience < 50 && !c.counterReminderPlayed) {
+                        c.counterReminderPlayed = true;
+                        playSound('order', 0.75, 600);
+                    }
+
                     if (c.patience <= 0) {
                         // ... (銋��?撌脫??�����??����?�頛�)
                         if (activeOrder && activeOrder.id === c.id) {
@@ -1694,7 +1730,7 @@
                             dragItems.left = dragItems.right = null;
                             handOpenUntil = { left: 0, right: 0 };
                             plateHasNoodles = plateHasCement = plateHasCilantro = false;
-                            potNoodleState = 'EMPTY'; potCookProgress = 0;
+                            resetPots();
                         }
                         if (c.tableIndex !== -1) {
                             tableStates[c.tableIndex] = 'DIRTY';
@@ -1764,6 +1800,7 @@
             if (macroState === 'GAMEPLAY') {
                 updateOrderUI(); // ?湔��?���刻�����??
                 handleFaceLogic();
+                updatePots();
                 renderGame();
             }
 
@@ -1871,7 +1908,7 @@
         }
 
         function updateOrderUI() {
-            if (macroState !== 'GAMEPLAY') {
+            if (macroState !== 'GAMEPLAY' || microLocation !== 'KITCHEN') {
                 orderContainer.innerHTML = '';
                 return;
             }
@@ -1880,7 +1917,7 @@
             const currentCards = orderContainer.querySelectorAll('.order-card');
 
             // ?�憿舐內�??券?擗��?蝑��??�摰Ｖ�?
-            const pendingCustomers = customers.filter(c => c.state === 'ORDERING' || c.state === 'WAITING_FOOD');
+            const pendingCustomers = customers.filter(c => c.state === 'WAITING_FOOD');
             
             let html = '';
             pendingCustomers.forEach((c, index) => {
@@ -2050,7 +2087,7 @@
 
                 const {
                     rawPastaArea,
-                    potArea,
+                    potAreas,
                     plateArea,
                     cilantroArea,
                     cementArea,
@@ -2112,37 +2149,29 @@
 
                 // ?�?��?
                 if (cookState === 'PUT_PASTA' || cookState === 'ASSEMBLY') {
-                    // --- ?��??�頛� ---
-                    if (potNoodleState === 'EMPTY') {
-                        // 憓��??��??扳炎?伐?憒��??虫??餅?撌脩??蹂??�暻蛛���?甇斗?銝����?���� (?脫迫?�頨� BUG)
-                        const otherHandSide = handSide === 'right' ? 'left' : 'right';
-                        if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'RAW_PASTA' && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
-                            dragItems[handSide] = 'RAW_PASTA';
-                            playSound('pickup', 0.45, 120);
-                        }
-                        if (dragItems[handSide] === 'RAW_PASTA' && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
+                    const otherHandSide = handSide === 'right' ? 'left' : 'right';
+                    if (pots.some(pot => pot.state === 'EMPTY') && isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'RAW_PASTA' && px > rawPastaArea.x && px < rawPastaArea.x + rawPastaArea.w && py > rawPastaArea.y && py < rawPastaArea.y + rawPastaArea.h) {
+                        dragItems[handSide] = 'RAW_PASTA';
+                        playSound('pickup', 0.45, 120);
+                    }
+
+                    const potIndex = getPotIndexAt(px, py, potAreas);
+                    if (potIndex >= 0) {
+                        const pot = pots[potIndex];
+                        if (dragItems[handSide] === 'RAW_PASTA' && pot.state === 'EMPTY') {
                             dragItems[handSide] = null;
                             handOpenUntil[handSide] = Date.now() + 450;
-                            potNoodleState = 'BOILING';
-                            potCookProgress = 0;
+                            pot.state = 'BOILING';
+                            pot.progress = 0;
                             playSound('boil', 0.45, 500);
-                        }
-                    } else if (potNoodleState === 'BOILING') {
-                        potCookProgress += 0.5;
-                        if (potCookProgress >= 100) {
-                            potNoodleState = 'READY';
-                        }
-                    } else if (potNoodleState === 'READY') {
-                        const otherHandSide = handSide === 'right' ? 'left' : 'right';
-                        if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'COOKED_PASTA' && !plateHasNoodles && px > potArea.x && px < potArea.x + potArea.w && py > potArea.y && py < potArea.y + potArea.h) {
+                        } else if (pot.state === 'READY' && isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'COOKED_PASTA' && !plateHasNoodles) {
                             dragItems[handSide] = 'COOKED_PASTA';
-                            potNoodleState = 'EMPTY';
+                            pot.state = 'EMPTY';
+                            pot.progress = 0;
                             playSound('pickup', 0.45, 120);
                         }
                     }
 
-                    // --- ?文??��??�頛� ---
-                    const otherHandSide = handSide === 'right' ? 'left' : 'right';
                     if (isFist && !dragItems[handSide] && dragItems[otherHandSide] !== 'CEMENT' && activeOrder.orderType.includes('CEMENT') && !plateHasCement && px > cementArea.x && px < cementArea.x + cementArea.w && py > cementArea.y && py < cementArea.y + cementArea.h) {
                         dragItems[handSide] = 'CEMENT';
                         playSound('pickup', 0.45, 120);
@@ -2283,7 +2312,7 @@
         function drawCookingUI() {
             const {
                 rawPastaArea,
-                potArea,
+                potAreas,
                 plateArea,
                 cilantroArea,
                 cementArea,
@@ -2315,30 +2344,31 @@
                 drawSpriteInBox(itemImages.cementCan, cementArea.x, cementArea.y - 4, cementArea.w, cementArea.h + 8, 1);
             }
 
-            const potRadius = Math.min(potArea.w, potArea.h) * 0.42;
-            const potCx = potArea.x + potArea.w / 2;
-            const potCy = potArea.y + potArea.h / 2;
+            potAreas.forEach((potArea, index) => {
+                const pot = pots[index] || { state: 'EMPTY', progress: 0 };
+                const potRadius = Math.min(potArea.w, potArea.h) * 0.42;
+                const potCx = potArea.x + potArea.w / 2;
+                const potCy = potArea.y + potArea.h / 2;
 
-            if (potNoodleState === 'BOILING') {
-                const flameFrame = flameImages[Math.floor(Date.now() / 140) % flameImages.length];
-                if (flameFrame && flameFrame.complete && flameFrame.naturalWidth > 0) {
-                    ctx.save();
-                    ctx.globalAlpha = 0.95;
-                    drawSpriteInBox(flameFrame, potArea.x + 42, potArea.y + potArea.h * 0.48, potArea.w - 84, 82, 1.08);
-                    ctx.restore();
+                if (pot.state === 'BOILING') {
+                    const flameFrame = flameImages[Math.floor(Date.now() / 140) % flameImages.length];
+                    if (flameFrame && flameFrame.complete && flameFrame.naturalWidth > 0) {
+                        ctx.save();
+                        ctx.globalAlpha = 0.95;
+                        drawSpriteInBox(flameFrame, potArea.x + 30, potArea.y + potArea.h * 0.48, potArea.w - 60, 68, 1.08);
+                        ctx.restore();
+                    }
                 }
-            }
 
-            drawSpriteInBox(itemImages.pot, potArea.x, potArea.y - 8, potArea.w, potArea.h + 16, 1.02);
+                drawSpriteInBox(itemImages.pot, potArea.x, potArea.y - 8, potArea.w, potArea.h + 16, 1.02);
 
-            if (potNoodleState !== 'EMPTY') {
-                if (potNoodleState === 'BOILING') {
+                if (pot.state === 'BOILING') {
                     ctx.fillStyle = '#e74c3c';
-                    ctx.fillRect(potArea.x + 25, potArea.y - 20, potCookProgress, 10);
-                } else if (potNoodleState === 'READY') {
+                    ctx.fillRect(potArea.x + 20, potArea.y - 20, (pot.progress / 100) * (potArea.w - 40), 10);
+                } else if (pot.state === 'READY') {
                     drawSpriteInBox(itemImages.cookedPasta, potCx - potRadius * 0.55, potCy - potRadius * 0.55, potRadius * 1.1, potRadius * 1.1, 1);
                 }
-            }
+            });
 
             const shouldShowPlate = (cleanPlates > 0 || plateHasNoodles || plateHasCement || plateHasCilantro);
             if (dragItems.left !== 'FINISHED_PLATE' && dragItems.right !== 'FINISHED_PLATE' && shouldShowPlate) {
@@ -2442,7 +2472,11 @@
                 cementArea: { x: 225, y: 66, w: 170, h: 150 },
                 shakerArea: { x: 62, y: 220, w: 150, h: 150 },
                 plateArea: { x: 352, y: 222, w: 255, h: 180 },
-                potArea: { x: 690, y: 270, w: 240, h: 168 },
+                potAreas: [
+                    { x: 706, y: 198, w: 172, h: 132 },
+                    { x: 724, y: 326, w: 172, h: 132 }
+                ],
+                potArea: { x: 724, y: 326, w: 172, h: 132 },
                 serveArea: { x: 450, y: 38, w: 310, h: 95 }
             };
         }
@@ -2569,8 +2603,6 @@
             }
 
             // ?��?蝛粹?撠����?��? (?���� GAMEPLAY 憿舐內嚗��?敺��??��??���Ｚ孛���)
-            drawNavigationArrows();
-
             if (microLocation === 'COUNTER') {
                 // ?怠恥鈭?(?�憿舐內甇�?券?擗��?蝚砌?雿?
                 const orderingCustomers = customers.filter(c => c.state === 'ORDERING');
@@ -2644,11 +2676,6 @@
 
             if (microLocation === 'DINING_ROOM') {
                 // 1. 蝜芾ˊ獢��??���批�?(?箸�� tableStates)
-                if (LEVELS[currentLevelIndex].id === 1) {
-                    const reservedTable = TABLE_POSITIONS[2];
-                    drawSpriteInBox(itemImages.reservedSign, reservedTable.x - 72, reservedTable.y - 88, 144, 92, 1);
-                }
-
                 for (let i = 0; i < LEVELS[currentLevelIndex].tables; i++) {
                     const pos = TABLE_POSITIONS[i];
                     const state = tableStates[i];
@@ -2791,6 +2818,8 @@
                     }
                 }
             }
+
+            drawNavigationArrows();
         }
 
         // --- 蝜芾ˊ蝛粹?撠���芰悌��� (Phase 2: ?���冽趙�?閫貊��) ---
