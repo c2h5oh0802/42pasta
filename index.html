@@ -34,10 +34,11 @@
         /* Canvas ??Video */
         canvas {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            width: min(100vw, calc(100vh * 16 / 9));
+            height: min(100vh, calc(100vw * 9 / 16));
+            transform: translate(-50%, -50%);
             object-fit: contain;
             /* 靽��?瘥��?蝮格�� */
             z-index: 10;
@@ -163,10 +164,11 @@
         /* --- 摰��??�??UI ?Ｘ�� (HTML 撖虫?) --- */
         .panel-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            width: min(100vw, calc(100vh * 16 / 9));
+            height: min(100vh, calc(100vw * 9 / 16));
+            transform: translate(-50%, -50%);
             background: transparent;
             /* ?寧��?��?嚗��?銝����??Canvas ?��??賡����箔�?*/
             z-index: 100;
@@ -1012,10 +1014,10 @@
             potCookProgress = 0;
         }
 
-        function updatePots() {
+        function updatePots(step = frameScale) {
             pots.forEach((pot) => {
                 if (pot.state === 'BOILING') {
-                    pot.progress = Math.min(100, pot.progress + 0.5);
+                    pot.progress = Math.min(100, pot.progress + 0.5 * step);
                     if (pot.progress >= 100) pot.state = 'READY';
                 }
             });
@@ -1135,6 +1137,8 @@
         let faceLandmarker, handLandmarker;
         let lastVideoTime = -1;
         let faceResult = null, handResult = null;
+        let lastFrameTime = 0;
+        let frameScale = 1;
 
         async function initMediaPipe() {
             const vision = await FilesetResolver.forVisionTasks(
@@ -1165,13 +1169,20 @@
 
         async function startCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: GAME_WIDTH, height: GAME_HEIGHT } });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 360 },
+                        frameRate: { ideal: 24, max: 30 }
+                    }
+                });
                 video.srcObject = stream;
                 video.addEventListener("loadeddata", () => {
                     loadingEl.classList.add('hidden');
                     initMatterJs();
                     loadSaveData();
                     changeMacroState('TITLE'); // 頛���亙���?嚗���脣�交���??恍��
+                    lastFrameTime = performance.now();
                     requestAnimationFrame(gameLoop);
                 });
             } catch (err) {
@@ -1329,7 +1340,7 @@
             if (orderContainer) orderContainer.innerHTML = '';
             droppedMoney.forEach(m => World.remove(world, m.body));
             droppedMoney = [];
-            customerSpawnTimer = 60;
+            customerSpawnTimer = 30;
             nextCustomerImageIndex = 0;
             negativeReviews = 0;
             reviewDisplay.style.display = 'none';
@@ -1664,18 +1675,22 @@
             World.add(world, [rightHandBody, leftHandBody]);
         }
 
-        function gameLoop() {
+        function gameLoop(timestamp = performance.now()) {
+            const elapsedMs = lastFrameTime ? timestamp - lastFrameTime : 1000 / 60;
+            lastFrameTime = timestamp;
+            frameScale = Math.max(0.25, Math.min(4, elapsedMs / (1000 / 60)));
+
             if (video.currentTime !== lastVideoTime) {
                 lastVideoTime = video.currentTime;
-                faceResult = faceLandmarker.detectForVideo(video, performance.now());
-                handResult = handLandmarker.detectForVideo(video, performance.now());
+                faceResult = faceLandmarker.detectForVideo(video, timestamp);
+                handResult = handLandmarker.detectForVideo(video, timestamp);
             }
 
-            Engine.update(engine, 1000 / 60);
+            Engine.update(engine, Math.min(1000 / 20, elapsedMs));
 
             // 摰Ｖ犖?��??�頛�
             if (macroState === 'GAMEPLAY') {
-                customerSpawnTimer--;
+                customerSpawnTimer -= frameScale;
                 // ?�鋆�??customers.length < LEVELS[currentLevelIndex].tables 隞?”?��?蝛箔??��?靘���啣恥鈭�??
                 // 蝑��?敺?Phase 4嚗��??��������?隞嗆��??(瑹�瑼�?��?鈭箸�� + ?券??�雿��?鈭箸��) < 蝮賢漣雿����
                 if (customerSpawnTimer <= 0 && customers.length < LEVELS[currentLevelIndex].tables) {
@@ -1709,14 +1724,14 @@
                     });
                     nextCustomerImageIndex = (nextCustomerImageIndex + 1) % customerImages.length;
                     // ?箇? 4 蝘��?銝�??+ 瘥�����?閰��???1.5 蝘��??��??��?
-                    customerSpawnTimer = 240 + (negativeReviews * 90);
+                    customerSpawnTimer = 150 + (negativeReviews * 60);
                 }
                 for (let i = customers.length - 1; i >= 0; i--) {
                     let c = customers[i];
                     // ?���其���?銝��?擗?(WAITING_FOOD) ?�撣豢���??冽?瑼舫?擗��??��? (憭批?隤踵��)
                     // 摰Ｖ犖?��?銝��??�摨西矽��� (暺��?敺?0.04 -> 0.02嚗��?擗��? 0.01 -> 0.006)
                     const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.006 : 0.02;
-                    c.patience -= patienceLoss;
+                    c.patience -= patienceLoss * frameScale;
 
                     if (c.state === 'ORDERING' && c.patience < 50 && !c.counterReminderPlayed) {
                         c.counterReminderPlayed = true;
@@ -1740,7 +1755,7 @@
                         negativeReviews++; customerSpawnTimer += 180;
                         updateReviews();
                     } else if (c.state === 'EATING') {
-                        c.eatTimer++;
+                        c.eatTimer += frameScale;
                         if (c.eatTimer > 300) { // ?券? 5 蝘?
                             if (c.tableIndex !== -1) {
                                 tableStates[c.tableIndex] = 'DIRTY';
@@ -1842,7 +1857,7 @@
                         orderingCustomer.serveDwell = 0;
                     } else {
                         if (isSmiling) {
-                            orderingCustomer.serveDwell += 0.03;
+                            orderingCustomer.serveDwell += 0.03 * frameScale;
                             if (orderingCustomer.serveDwell >= 1) {
                                 orderingCustomer.state = 'WAITING_FOOD';
                                 orderingCustomer.tableIndex = freeTableIndex;
@@ -1856,7 +1871,7 @@
                                 playSound('order', 0.65, 300);
                             }
                         } else {
-                            orderingCustomer.serveDwell = Math.max(0, orderingCustomer.serveDwell - 0.01);
+                            orderingCustomer.serveDwell = Math.max(0, orderingCustomer.serveDwell - 0.01 * frameScale);
                         }
                     }
                 }
@@ -2295,7 +2310,7 @@
             }
 
             if (tipTimer > 0) {
-                tipTimer--;
+                tipTimer = Math.max(0, tipTimer - frameScale);
                 ctx.font = 'bold 24px Arial';
                 const width = Math.min(760, Math.max(360, ctx.measureText(tipText).width + 64));
                 const x = GAME_WIDTH / 2 - width / 2;
