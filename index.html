@@ -284,10 +284,10 @@
             background-position: center;
             background-size: cover;
             box-sizing: border-box;
-            justify-content: center;
+            justify-content: flex-start;
             padding-top: 0;
             padding-bottom: 0;
-            gap: 26px;
+            gap: 0;
         }
 
         #level-select-screen h2 {
@@ -299,10 +299,13 @@
         }
 
         .level-grid {
-            gap: 22px;
+            position: absolute;
+            top: 49%;
+            left: 50%;
+            gap: 28px;
             justify-content: center;
-            max-width: 760px;
-            transform: translateY(18px);
+            max-width: min(560px, 78%);
+            transform: translateX(-50%);
         }
 
         .level-card {
@@ -311,11 +314,11 @@
             border-radius: 6px;
             box-shadow: 0 8px 0 rgba(95, 52, 27, 0.45), 0 12px 24px rgba(50, 25, 12, 0.28);
             color: #3b2316;
-            padding: 22px 22px 20px;
+            padding: 15px 18px 14px;
             text-align: center;
             transition: transform 0.16s, box-shadow 0.16s, filter 0.16s;
-            width: 230px;
-            min-height: 104px;
+            width: 180px;
+            min-height: 78px;
         }
 
         .level-card:hover {
@@ -339,9 +342,9 @@
 
         .level-title {
             border-bottom: 0;
-            font-size: 32px;
+            font-size: 26px;
             font-weight: 900;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             padding-bottom: 0;
         }
 
@@ -360,12 +363,19 @@
         }
 
         #level-select-screen .btn {
+            position: absolute;
+            top: 71%;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(84, 52, 31, 0.9) !important;
             border: 2px solid rgba(255, 235, 178, 0.72);
             border-radius: 6px;
             box-shadow: 0 4px 0 rgba(50, 25, 12, 0.8) !important;
             color: #fff2c2;
-            margin-top: 34px !important;
+            margin: 0 !important;
+            min-width: 145px;
+            padding: 12px 28px;
+            font-size: 22px;
         }
 
         #level-select-screen {
@@ -635,6 +645,14 @@
             min-width: 150px;
             font-size: clamp(15px, 1.45vw, 19px);
             padding: 10px 24px 12px;
+        }
+
+        #level-select-screen .btn:hover {
+            transform: translate(-50%, 2px);
+        }
+
+        #level-select-screen .btn:active {
+            transform: translate(-50%, 4px);
         }
     </style>
     <!-- Matter.js -->
