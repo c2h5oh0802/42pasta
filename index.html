@@ -636,6 +636,231 @@
         }
 
         /* ?文?憿舐內 */
+        .online-card {
+            width: min(560px, 82%);
+            padding: 24px 28px 26px;
+            box-sizing: border-box;
+            color: #3b2316;
+            background: rgba(255, 246, 218, 0.94);
+            border: 3px solid rgba(91, 55, 30, 0.78);
+            border-radius: 8px;
+            box-shadow: 0 12px 0 rgba(95, 52, 27, 0.45), 0 18px 34px rgba(24, 12, 6, 0.32);
+        }
+
+        .online-card h2 {
+            margin: 0 0 16px;
+            color: #3b2316;
+            font-size: clamp(28px, 4vw, 42px);
+            line-height: 1;
+        }
+
+        .online-name-input {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 8px 0 16px;
+            padding: 13px 16px;
+            color: #3b2316;
+            background: #fff9e9;
+            border: 2px solid rgba(91, 55, 30, 0.55);
+            border-radius: 6px;
+            font-size: clamp(18px, 2vw, 24px);
+            font-weight: 900;
+            text-align: center;
+        }
+
+        .online-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .online-actions .btn {
+            min-width: 150px;
+            margin: 4px;
+            padding: 12px 22px;
+            font-size: clamp(17px, 2vw, 22px);
+        }
+
+        .online-status {
+            min-height: 28px;
+            margin: 8px 0 14px;
+            color: #6a3b20;
+            font-size: clamp(16px, 1.8vw, 22px);
+            font-weight: 900;
+            line-height: 1.3;
+        }
+
+        .online-error {
+            color: #a93226;
+        }
+
+        #level-online-actions {
+            position: absolute;
+            top: 56%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: min(620px, 86%);
+            pointer-events: auto;
+        }
+
+        #level-online-actions .btn {
+            margin: 0;
+            padding: 10px 20px;
+            font-size: clamp(16px, 1.8vw, 21px);
+        }
+
+        .nickname-chip {
+            max-width: 190px;
+            overflow: hidden;
+            color: #fff2c2;
+            font-weight: 900;
+            text-overflow: ellipsis;
+            text-shadow: 0 2px 2px rgba(0, 0, 0, 0.45);
+            white-space: nowrap;
+        }
+
+        #battle-hud {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            display: none;
+            min-width: 300px;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            color: #fff8df;
+            background: rgba(39, 28, 20, 0.88);
+            border: 2px solid rgba(255, 224, 150, 0.48);
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28);
+            pointer-events: auto;
+        }
+
+        .battle-score-row {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-weight: 900;
+        }
+
+        .battle-score {
+            min-width: 0;
+        }
+
+        .battle-score span {
+            display: block;
+            color: #e5c58b;
+            font-size: 11px;
+            line-height: 1;
+            margin-bottom: 3px;
+        }
+
+        .battle-score strong {
+            display: block;
+            color: #77e79f;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        #battle-time {
+            min-width: 58px;
+            color: #ff705f;
+            font-size: 30px;
+            font-weight: 950;
+            line-height: 1;
+            text-align: center;
+        }
+
+        .battle-items {
+            display: flex;
+            gap: 8px;
+            margin-top: 9px;
+        }
+
+        .battle-item-slot {
+            width: 58px;
+            height: 54px;
+            box-sizing: border-box;
+            display: grid;
+            place-items: center;
+            background: rgba(255, 244, 205, 0.12);
+            border: 1px solid rgba(255, 230, 160, 0.38);
+            border-radius: 6px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .battle-item-slot img {
+            max-width: 48px;
+            max-height: 44px;
+            pointer-events: none;
+        }
+
+        .battle-item-slot.empty {
+            cursor: default;
+            opacity: 0.45;
+        }
+
+        .battle-item-slot.hand-hover {
+            transform: scale(1.04);
+        }
+
+        #online-result-screen .online-card {
+            width: min(720px, 88%);
+            max-height: 90%;
+            overflow: hidden;
+        }
+
+        .online-result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 10px 0 14px;
+        }
+
+        .online-result-score {
+            padding: 10px;
+            background: rgba(255, 240, 203, 0.62);
+            border: 2px dashed rgba(112, 61, 28, 0.36);
+            border-radius: 6px;
+            font-weight: 900;
+        }
+
+        .online-result-score strong {
+            display: block;
+            margin-top: 4px;
+            color: #2d9f57;
+            font-size: 26px;
+        }
+
+        #leaderboard-list {
+            margin: 8px 0 14px;
+            padding: 0;
+            list-style: none;
+            text-align: left;
+            color: #3b2316;
+            font-weight: 800;
+        }
+
+        #leaderboard-list li {
+            display: grid;
+            grid-template-columns: 34px 1fr auto;
+            gap: 8px;
+            padding: 5px 8px;
+            border-bottom: 1px solid rgba(91, 55, 30, 0.18);
+        }
+
+        .order-card.confused .order-type-text,
+        .order-card.confused .order-status {
+            color: transparent;
+            text-shadow: 0 0 8px rgba(61, 36, 22, 0.88);
+        }
+
         #plate-display {
             display: block;
         }
@@ -694,6 +919,23 @@
         </div>
 
         <!-- 璅��??恍�� (TITLE) -->
+            <div id="battle-hud" class="hud">
+                <div class="battle-score-row">
+                    <div class="battle-score">
+                        <span>我的營業額</span>
+                        <strong>$<b id="battle-my-score">0</b></strong>
+                    </div>
+                    <div id="battle-time">120</div>
+                    <div class="battle-score">
+                        <span>對手營業額</span>
+                        <strong>$<b id="battle-opponent-score">0</b></strong>
+                    </div>
+                </div>
+                <div class="battle-items">
+                    <button class="battle-item-slot empty" id="battle-item-0" type="button" aria-label="道具 1"></button>
+                    <button class="battle-item-slot empty" id="battle-item-1" type="button" aria-label="道具 2"></button>
+                </div>
+            </div>
         <div id="title-screen" class="panel-overlay hidden">
             <img id="title-door-image" src="assets/img/bg/標題關門.png" alt="42號義麵店關門標題">
             <div id="title-close-target" onclick="openTitleDoor()" aria-label="CLOSE 掛牌"></div>
@@ -701,10 +943,44 @@
         </div>
 
         <!-- ?����?豢??恍�� (LEVEL_SELECT) -->
+        <div id="online-name-screen" class="panel-overlay hidden">
+            <div class="online-card">
+                <h2>玩家稱號</h2>
+                <input id="nickname-input" class="online-name-input" maxlength="16" autocomplete="off" placeholder="輸入你的稱號">
+                <div id="online-name-status" class="online-status"></div>
+                <div class="online-actions">
+                    <button class="btn" id="btn-name-single" type="button">單人模式</button>
+                    <button class="btn" id="btn-name-online" type="button">線上對戰</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="matchmaking-screen" class="panel-overlay hidden">
+            <div class="online-card">
+                <h2>等待對手</h2>
+                <div id="matchmaking-status" class="online-status">正在配對...</div>
+                <div class="online-actions">
+                    <button class="btn" id="btn-cancel-matchmaking" type="button">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="online-countdown-screen" class="panel-overlay hidden">
+            <div class="online-card">
+                <h2>對戰開始</h2>
+                <div id="online-countdown-value" class="online-status">5</div>
+            </div>
+        </div>
+
         <div id="level-select-screen" class="panel-overlay hidden">
             <h2>選擇關卡</h2>
             <div class="level-grid" id="level-grid-container">
                 <!-- ??JS ?��??��? -->
+            </div>
+            <div id="level-online-actions">
+                <span class="nickname-chip" id="nickname-chip"></span>
+                <button class="btn" id="btn-level-online" type="button">線上對戰</button>
+                <button class="btn" id="btn-edit-nickname" type="button">修改稱號</button>
             </div>
             <button class="btn" onclick="changeMacroState('TITLE')"
                 style="margin-top: 40px; background:#7f8c8d; box-shadow: 0 4px 0 #546e7a;">返回標題</button>
@@ -730,6 +1006,26 @@
     </div>
 
     <!-- ?日��?函??�?�撘�?嗅??��???-->
+        <div id="online-result-screen" class="panel-overlay hidden">
+            <div class="online-card">
+                <h2 id="online-result-title">對戰結算</h2>
+                <div class="online-result-grid">
+                    <div class="online-result-score">
+                        <span id="online-my-name">我</span>
+                        <strong>$<b id="online-my-final-score">0</b></strong>
+                    </div>
+                    <div class="online-result-score">
+                        <span id="online-opponent-name">對手</span>
+                        <strong>$<b id="online-opponent-final-score">0</b></strong>
+                    </div>
+                </div>
+                <ol id="leaderboard-list"></ol>
+                <div class="online-actions">
+                    <button class="btn" id="btn-online-again" type="button">再戰一場</button>
+                    <button class="btn" id="btn-online-back" type="button">回選單</button>
+                </div>
+            </div>
+        </div>
     <div id="controls">
         <button onclick="setMicroLocation('COUNTER')">切換: 櫃台 (COUNTER)</button>
         <button onclick="setMicroLocation('DINING_ROOM')">切換: 用餐區 (DINING_ROOM)</button>
@@ -746,6 +1042,27 @@
             HandLandmarker,
             FilesetResolver
         } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+        import {
+            getDatabase,
+            ref,
+            child,
+            get,
+            set,
+            update,
+            remove,
+            push,
+            onValue,
+            onChildAdded,
+            off,
+            onDisconnect,
+            serverTimestamp,
+            query,
+            orderByChild,
+            limitToFirst,
+            limitToLast
+        } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
         // --- ?����?嗆??�?��???---
         let macroState = 'LOADING'; // LOADING, TITLE, LEVEL_SELECT, GAMEPLAY, LEVEL_RESULT
@@ -759,6 +1076,43 @@
         let currentLevelIndex = 0;
         let gameTimer = 0;
         let gameTimerInterval = null;
+        const FIREBASE_CONFIG = {
+            apiKey: "",
+            authDomain: "",
+            databaseURL: "",
+            projectId: "",
+            appId: ""
+        };
+        const ONLINE_RULES = { time: 120, itemEveryServes: 3, maxItems: 2 };
+        const BATTLE_ITEMS = {
+            RUSH_HOUR: { name: '尖峰時刻', icon: 'assets/img/items/shaker.png' },
+            DIRTY_TABLE: { name: '髒桌突襲', icon: 'assets/img/items/table-stain.png' },
+            CONFUSE_ORDER: { name: '訂單混亂', icon: 'assets/img/ui/order-ticket.png' },
+            STICKY_HANDS: { name: '黏手攻擊', icon: 'assets/img/items/tissue-ball.png' }
+        };
+        const BATTLE_ITEM_KEYS = Object.keys(BATTLE_ITEMS);
+        let onlineMode = false;
+        let playerNickname = '';
+        let onlineMatchId = null;
+        let onlinePlayerId = null;
+        let onlineOpponentId = null;
+        let onlineMatchData = null;
+        let opponentState = {};
+        let battleItems = [];
+        let activeDebuffs = {};
+        let pendingDirtyTable = false;
+        let onlineServedCount = 0;
+        let onlineResultSubmitted = false;
+        let lastOnlinePublish = 0;
+        let firebaseApp = null;
+        let firebaseAuth = null;
+        let firebaseDb = null;
+        let serverTimeOffset = 0;
+        let matchmakingUnsub = null;
+        let matchUnsub = null;
+        let eventUnsub = null;
+        let leaderboardUnsub = null;
+        let processedOnlineEvents = new Set();
 
         // 摮��?蝟餌絞 (閮��?瘥��??��??�擃��??���賂�?隞?”?芾圾???芷???
         let saveMemory = {
@@ -889,6 +1243,22 @@
         const titleDoorImage = document.getElementById('title-door-image');
         const titleCloseTarget = document.getElementById('title-close-target');
         const titleHint = document.getElementById('title-hint');
+        const onlineNameScreen = document.getElementById('online-name-screen');
+        const matchmakingScreen = document.getElementById('matchmaking-screen');
+        const onlineCountdownScreen = document.getElementById('online-countdown-screen');
+        const onlineResultScreen = document.getElementById('online-result-screen');
+        const nicknameInput = document.getElementById('nickname-input');
+        const onlineNameStatus = document.getElementById('online-name-status');
+        const matchmakingStatus = document.getElementById('matchmaking-status');
+        const onlineCountdownValue = document.getElementById('online-countdown-value');
+        const battleHud = document.getElementById('battle-hud');
+        const battleMyScoreEl = document.getElementById('battle-my-score');
+        const battleOpponentScoreEl = document.getElementById('battle-opponent-score');
+        const battleTimeEl = document.getElementById('battle-time');
+        const battleItemSlots = [document.getElementById('battle-item-0'), document.getElementById('battle-item-1')];
+        const nicknameChip = document.getElementById('nickname-chip');
+        const levelOnlineButton = document.getElementById('btn-level-online');
+        const editNicknameButton = document.getElementById('btn-edit-nickname');
         const levelSelectScreen = document.getElementById('level-select-screen');
         const resultScreen = document.getElementById('result-screen');
         const levelGrid = document.getElementById('level-grid-container');
@@ -1084,7 +1454,7 @@
         }
 
         function getPersistentHint() {
-            if (macroState !== 'GAMEPLAY') return '';
+            if (!isGameplayState()) return '';
             if (microLocation === 'KITCHEN') return getKitchenActionHint();
             if (microLocation === 'COUNTER') return customers.some(c => c.state === 'ORDERING') ? '對客人微笑接單' : '';
             if (microLocation === 'DINING_ROOM') {
@@ -1218,10 +1588,420 @@
                 saveMemory = { stars: [0, 0, 0] };
                 saveMemory.stars[0] = 0; // 0?��??舐��
             }
+            loadPlayerNickname();
         }
         function saveGame() {
             localStorage.setItem('42PastaSave', JSON.stringify(saveMemory));
         }
+
+        function isFirebaseConfigured() {
+            return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.databaseURL && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId);
+        }
+
+        function sanitizeNickname(value) {
+            return (value || '').trim().replace(/\s+/g, ' ').slice(0, 16);
+        }
+
+        function saveNicknameFromInput() {
+            playerNickname = sanitizeNickname(nicknameInput?.value);
+            if (!playerNickname) {
+                if (onlineNameStatus) {
+                    onlineNameStatus.textContent = '請先輸入稱號';
+                    onlineNameStatus.classList.add('online-error');
+                }
+                return false;
+            }
+            localStorage.setItem('42PastaNickname', playerNickname);
+            if (nicknameChip) nicknameChip.textContent = playerNickname;
+            if (onlineNameStatus) {
+                onlineNameStatus.textContent = '';
+                onlineNameStatus.classList.remove('online-error');
+            }
+            return true;
+        }
+
+        function loadPlayerNickname() {
+            playerNickname = sanitizeNickname(localStorage.getItem('42PastaNickname') || '');
+            if (nicknameInput) nicknameInput.value = playerNickname;
+            if (nicknameChip) nicknameChip.textContent = playerNickname || '尚未設定稱號';
+        }
+
+        function setOnlineStatus(text, isError = false) {
+            const el = macroState === 'MATCHMAKING' ? matchmakingStatus : onlineNameStatus;
+            if (!el) return;
+            el.textContent = text;
+            el.classList.toggle('online-error', isError);
+        }
+
+        async function ensureFirebaseReady() {
+            if (!isFirebaseConfigured()) throw new Error('尚未設定 Firebase');
+            if (!firebaseApp) {
+                firebaseApp = initializeApp(FIREBASE_CONFIG);
+                firebaseAuth = getAuth(firebaseApp);
+                firebaseDb = getDatabase(firebaseApp);
+                onValue(ref(firebaseDb, '.info/serverTimeOffset'), snapshot => {
+                    serverTimeOffset = snapshot.val() || 0;
+                });
+            }
+            if (!firebaseAuth.currentUser) {
+                await signInAnonymously(firebaseAuth);
+                await new Promise(resolve => {
+                    if (firebaseAuth.currentUser) return resolve();
+                    const stop = onAuthStateChanged(firebaseAuth, () => {
+                        stop();
+                        resolve();
+                    });
+                });
+            }
+            onlinePlayerId = firebaseAuth.currentUser.uid;
+        }
+
+        function serverNowMs() {
+            return Date.now() + serverTimeOffset;
+        }
+
+        function cleanupOnlineListeners() {
+            if (matchmakingUnsub) matchmakingUnsub();
+            if (matchUnsub) matchUnsub();
+            if (eventUnsub) eventUnsub();
+            if (leaderboardUnsub) leaderboardUnsub();
+            matchmakingUnsub = matchUnsub = eventUnsub = leaderboardUnsub = null;
+        }
+
+        async function leaveMatchmaking() {
+            if (firebaseDb && onlinePlayerId) {
+                await remove(ref(firebaseDb, `queue/${onlinePlayerId}`)).catch(() => {});
+            }
+            cleanupOnlineListeners();
+        }
+
+        function resetOnlineRoundState() {
+            onlineMode = false;
+            onlineMatchId = null;
+            onlineOpponentId = null;
+            onlineMatchData = null;
+            opponentState = {};
+            battleItems = [];
+            activeDebuffs = {};
+            pendingDirtyTable = false;
+            onlineServedCount = 0;
+            onlineResultSubmitted = false;
+            processedOnlineEvents = new Set();
+            updateBattleHud();
+        }
+
+        async function startOnlineMatchmaking() {
+            if (!saveNicknameFromInput()) return;
+            if (!isFirebaseConfigured()) {
+                setOnlineStatus('尚未設定 Firebase，單人模式可正常遊玩', true);
+                return;
+            }
+            onlineMode = true;
+            changeMacroState('MATCHMAKING');
+            setOnlineStatus('正在配對...');
+            try {
+                await ensureFirebaseReady();
+                const queueRoot = ref(firebaseDb, 'queue');
+                const firstWaiting = await get(query(queueRoot, orderByChild('createdAt'), limitToFirst(6)));
+                let opponentEntry = null;
+                firstWaiting.forEach(snap => {
+                    if (!opponentEntry && snap.key !== onlinePlayerId && !snap.val()?.matchId) {
+                        opponentEntry = { id: snap.key, data: snap.val() };
+                    }
+                });
+
+                if (opponentEntry) {
+                    const matchRef = push(ref(firebaseDb, 'matches'));
+                    const startAt = serverNowMs() + 5000;
+                    const endsAt = startAt + ONLINE_RULES.time * 1000;
+                    await set(matchRef, {
+                        status: 'countdown',
+                        createdAt: serverTimestamp(),
+                        startAt,
+                        endsAt,
+                        players: {
+                            [onlinePlayerId]: createInitialPlayerState(playerNickname),
+                            [opponentEntry.id]: createInitialPlayerState(opponentEntry.data.nickname || '對手')
+                        }
+                    });
+                    await update(ref(firebaseDb, `queue/${opponentEntry.id}`), { matchId: matchRef.key });
+                    await enterOnlineMatch(matchRef.key);
+                    return;
+                }
+
+                const myQueueRef = ref(firebaseDb, `queue/${onlinePlayerId}`);
+                await set(myQueueRef, { nickname: playerNickname, createdAt: serverTimestamp() });
+                onDisconnect(myQueueRef).remove();
+                matchmakingUnsub = onValue(myQueueRef, async snapshot => {
+                    const data = snapshot.val();
+                    if (data?.matchId) {
+                        await remove(myQueueRef).catch(() => {});
+                        await enterOnlineMatch(data.matchId);
+                    }
+                });
+            } catch (err) {
+                console.error(err);
+                setOnlineStatus(err.message || '配對失敗', true);
+            }
+        }
+
+        function createInitialPlayerState(nickname) {
+            return {
+                nickname,
+                score: 0,
+                finalScore: 0,
+                negativeReviews: 0,
+                servedCount: 0,
+                itemInventory: [],
+                ready: true,
+                finished: false
+            };
+        }
+
+        async function enterOnlineMatch(matchId) {
+            cleanupOnlineListeners();
+            onlineMode = true;
+            onlineMatchId = matchId;
+            onlineResultSubmitted = false;
+            processedOnlineEvents = new Set();
+            changeMacroState('ONLINE_COUNTDOWN');
+            const matchRef = ref(firebaseDb, `matches/${matchId}`);
+            matchUnsub = onValue(matchRef, snapshot => {
+                onlineMatchData = snapshot.val();
+                if (!onlineMatchData) {
+                    showTip('對戰已結束');
+                    resetOnlineRoundState();
+                    changeMacroState('LEVEL_SELECT');
+                    return;
+                }
+                const players = onlineMatchData.players || {};
+                onlineOpponentId = Object.keys(players).find(id => id !== onlinePlayerId) || null;
+                opponentState = onlineOpponentId ? (players[onlineOpponentId] || {}) : {};
+                updateBattleHud();
+
+                if (onlineMatchData.status === 'countdown') {
+                    changeMacroState('ONLINE_COUNTDOWN');
+                } else if (onlineMatchData.status === 'playing' && macroState !== 'ONLINE_GAMEPLAY') {
+                    changeMacroState('ONLINE_GAMEPLAY');
+                } else if (onlineMatchData.status === 'finished' && macroState !== 'ONLINE_RESULT') {
+                    changeMacroState('ONLINE_RESULT');
+                }
+            });
+            eventUnsub = onChildAdded(ref(firebaseDb, `matches/${matchId}/events`), snapshot => {
+                const event = snapshot.val();
+                if (!event || event.to !== onlinePlayerId || processedOnlineEvents.has(snapshot.key)) return;
+                processedOnlineEvents.add(snapshot.key);
+                applyBattleItemEffect(event.type);
+            });
+        }
+
+        function publishOnlineState(force = false) {
+            if (!onlineMode || !firebaseDb || !onlineMatchId || !onlinePlayerId) return;
+            const now = performance.now();
+            if (!force && now - lastOnlinePublish < 700) return;
+            lastOnlinePublish = now;
+            const payload = {
+                nickname: playerNickname,
+                score,
+                finalScore: Math.max(0, score - negativeReviews * 15),
+                negativeReviews,
+                servedCount: onlineServedCount,
+                itemInventory: battleItems,
+                ready: true,
+                finished: onlineResultSubmitted
+            };
+            update(ref(firebaseDb, `matches/${onlineMatchId}/players/${onlinePlayerId}`), payload).catch(() => {});
+        }
+
+        function updateBattleHud() {
+            if (!battleHud) return;
+            const show = onlineMode && (macroState === 'ONLINE_GAMEPLAY' || macroState === 'ONLINE_COUNTDOWN');
+            battleHud.style.display = show ? 'block' : 'none';
+            if (battleMyScoreEl) battleMyScoreEl.textContent = score;
+            if (battleOpponentScoreEl) battleOpponentScoreEl.textContent = opponentState?.score || 0;
+            if (battleTimeEl) battleTimeEl.textContent = Math.max(0, gameTimer);
+            battleItemSlots.forEach((slot, index) => {
+                if (!slot) return;
+                const itemKey = battleItems[index];
+                slot.classList.toggle('empty', !itemKey);
+                slot.innerHTML = itemKey ? `<img src="${BATTLE_ITEMS[itemKey].icon}" alt="${BATTLE_ITEMS[itemKey].name}">` : '';
+                slot.title = itemKey ? BATTLE_ITEMS[itemKey].name : '空道具槽';
+            });
+        }
+
+        function grantBattleItemIfNeeded() {
+            if (!onlineMode) return;
+            onlineServedCount++;
+            if (onlineServedCount % ONLINE_RULES.itemEveryServes !== 0 || battleItems.length >= ONLINE_RULES.maxItems) {
+                publishOnlineState(true);
+                return;
+            }
+            const itemKey = BATTLE_ITEM_KEYS[Math.floor(Math.random() * BATTLE_ITEM_KEYS.length)];
+            battleItems.push(itemKey);
+            showTip(`獲得道具：${BATTLE_ITEMS[itemKey].name}`);
+            updateBattleHud();
+            publishOnlineState(true);
+        }
+
+        async function useBattleItem(index) {
+            const itemKey = battleItems[index];
+            if (!onlineMode || !itemKey || !onlineOpponentId || !firebaseDb || !onlineMatchId) return;
+            battleItems.splice(index, 1);
+            updateBattleHud();
+            publishOnlineState(true);
+            await push(ref(firebaseDb, `matches/${onlineMatchId}/events`), {
+                from: onlinePlayerId,
+                to: onlineOpponentId,
+                type: itemKey,
+                createdAt: serverTimestamp()
+            });
+            showTip(`使用道具：${BATTLE_ITEMS[itemKey].name}`);
+        }
+
+        function applyBattleItemEffect(type) {
+            const now = performance.now();
+            if (type === 'RUSH_HOUR') {
+                activeDebuffs.rushHourUntil = now + 10000;
+                showTip('對手使用了尖峰時刻');
+            } else if (type === 'DIRTY_TABLE') {
+                pendingDirtyTable = true;
+                applyPendingDirtyTable();
+                showTip('對手弄髒了一張桌子');
+            } else if (type === 'CONFUSE_ORDER') {
+                activeDebuffs.confuseOrderUntil = now + 8000;
+                updateOrderUI();
+                showTip('訂單被干擾了');
+            } else if (type === 'STICKY_HANDS') {
+                activeDebuffs.stickyHandsUntil = now + 8000;
+                showTip('雙手變黏了');
+            }
+        }
+
+        function applyPendingDirtyTable() {
+            if (!pendingDirtyTable) return;
+            const tableIndex = tableStates.findIndex((state, idx) => state === 'FREE' && idx < LEVELS[currentLevelIndex].tables);
+            if (tableIndex === -1) return;
+            tableStates[tableIndex] = 'DIRTY';
+            tableCleanProgress[tableIndex] = 0;
+            pendingDirtyTable = false;
+        }
+
+        function getDebuffProgressMultiplier() {
+            return activeDebuffs.stickyHandsUntil && performance.now() < activeDebuffs.stickyHandsUntil ? 1.45 : 1;
+        }
+
+        function isGameplayState() {
+            return macroState === 'GAMEPLAY' || macroState === 'ONLINE_GAMEPLAY';
+        }
+
+        async function finishOnlineMatch() {
+            if (!onlineMode || onlineResultSubmitted) return;
+            onlineResultSubmitted = true;
+            const finalScore = Math.max(0, score - negativeReviews * 15);
+            publishOnlineState(true);
+            if (firebaseDb && onlineMatchId && onlinePlayerId) {
+                await update(ref(firebaseDb, `matches/${onlineMatchId}/players/${onlinePlayerId}`), {
+                    finalScore,
+                    grossScore: score,
+                    negativeReviews,
+                    finished: true
+                }).catch(() => {});
+                const latest = await get(ref(firebaseDb, `matches/${onlineMatchId}/players`)).catch(() => null);
+                const players = latest?.val?.() || {};
+                const allFinished = Object.values(players).length >= 2 && Object.values(players).every(p => p.finished);
+                if (allFinished) {
+                    await update(ref(firebaseDb, `matches/${onlineMatchId}`), { status: 'finished' }).catch(() => {});
+                }
+            }
+            changeMacroState('ONLINE_RESULT');
+            await submitLeaderboard(finalScore);
+        }
+
+        async function submitLeaderboard(finalScore) {
+            if (!firebaseDb || !onlineMatchId || !onlinePlayerId) return;
+            const opponentFinal = opponentState?.finalScore || Math.max(0, (opponentState?.score || 0) - (opponentState?.negativeReviews || 0) * 15);
+            const won = finalScore > opponentFinal;
+            await push(ref(firebaseDb, 'leaderboard'), {
+                nickname: playerNickname,
+                finalScore,
+                grossScore: score,
+                negativeReviews,
+                won,
+                createdAt: serverTimestamp()
+            }).catch(() => {});
+            listenLeaderboard();
+        }
+
+        function listenLeaderboard() {
+            if (!firebaseDb) return;
+            if (leaderboardUnsub) leaderboardUnsub();
+            leaderboardUnsub = onValue(query(ref(firebaseDb, 'leaderboard'), orderByChild('finalScore'), limitToLast(10)), snapshot => {
+                const rows = [];
+                snapshot.forEach(childSnap => rows.push({ id: childSnap.key, ...childSnap.val() }));
+                rows.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
+                renderLeaderboard(rows);
+            });
+        }
+
+        function renderLeaderboard(rows) {
+            const list = document.getElementById('leaderboard-list');
+            if (!list) return;
+            list.innerHTML = rows.map((row, index) => `
+                <li><span>${index + 1}</span><span>${row.nickname || '玩家'}</span><strong>$${row.finalScore || 0}</strong></li>
+            `).join('') || '<li><span>-</span><span>尚無排行</span><strong>$0</strong></li>';
+        }
+
+        function showOnlineResultScreen() {
+            const myFinal = Math.max(0, score - negativeReviews * 15);
+            const opponentFinal = opponentState?.finalScore || Math.max(0, (opponentState?.score || 0) - (opponentState?.negativeReviews || 0) * 15);
+            const resultTitle = document.getElementById('online-result-title');
+            if (resultTitle) {
+                resultTitle.textContent = myFinal === opponentFinal ? '平手' : (myFinal > opponentFinal ? '勝利' : '失敗');
+            }
+            document.getElementById('online-my-name').textContent = playerNickname || '我';
+            document.getElementById('online-opponent-name').textContent = opponentState?.nickname || '對手';
+            document.getElementById('online-my-final-score').textContent = myFinal;
+            document.getElementById('online-opponent-final-score').textContent = opponentFinal;
+            if (onlineResultScreen) onlineResultScreen.classList.remove('hidden');
+            listenLeaderboard();
+            updateUiTargets();
+        }
+
+        document.getElementById('btn-name-single')?.addEventListener('click', () => {
+            if (saveNicknameFromInput()) changeMacroState('LEVEL_SELECT');
+        });
+        document.getElementById('btn-name-online')?.addEventListener('click', startOnlineMatchmaking);
+        levelOnlineButton?.addEventListener('click', () => {
+            if (!playerNickname) {
+                changeMacroState('ONLINE_NAME');
+                return;
+            }
+            startOnlineMatchmaking();
+        });
+        editNicknameButton?.addEventListener('click', () => changeMacroState('ONLINE_NAME'));
+        document.getElementById('btn-cancel-matchmaking')?.addEventListener('click', async () => {
+            await leaveMatchmaking();
+            resetOnlineRoundState();
+            changeMacroState('LEVEL_SELECT');
+        });
+        document.getElementById('btn-online-again')?.addEventListener('click', async () => {
+            cleanupOnlineListeners();
+            resetOnlineRoundState();
+            await startOnlineMatchmaking();
+        });
+        document.getElementById('btn-online-back')?.addEventListener('click', () => {
+            cleanupOnlineListeners();
+            resetOnlineRoundState();
+            changeMacroState('LEVEL_SELECT');
+        });
+        battleItemSlots.forEach((slot, index) => {
+            slot?.addEventListener('click', () => useBattleItem(index));
+        });
+        window.addEventListener('beforeunload', () => {
+            if (firebaseDb && onlinePlayerId) {
+                remove(ref(firebaseDb, `queue/${onlinePlayerId}`)).catch(() => {});
+            }
+        });
 
         window.openTitleDoor = function () {
             if (isTitleDoorOpening || macroState !== 'TITLE') return;
@@ -1236,7 +2016,7 @@
             uiDwellHandSide = null;
             titleDoorTimer = setTimeout(() => {
                 titleDoorTimer = null;
-                changeMacroState('LEVEL_SELECT');
+                changeMacroState(playerNickname ? 'LEVEL_SELECT' : 'ONLINE_NAME');
             }, 1000);
         };
 
@@ -1248,9 +2028,14 @@
                 titleDoorTimer = null;
             }
             titleScreen.classList.add('hidden');
+            onlineNameScreen?.classList.add('hidden');
+            matchmakingScreen?.classList.add('hidden');
+            onlineCountdownScreen?.classList.add('hidden');
+            onlineResultScreen?.classList.add('hidden');
             levelSelectScreen.classList.add('hidden');
             resultScreen.classList.add('hidden');
             statusHud.style.display = 'none';
+            if (battleHud) battleHud.style.display = 'none';
             orderContainer.innerHTML = ''; // 瘥�甈�?��??�?����?��?蝛箄??桀��?��??踹?畾��??啁?蝞����??
 
             if (newState === 'TITLE') {
@@ -1261,15 +2046,38 @@
                 plateDisplay.style.display = 'none';
                 orderContainer.innerHTML = '';
             } else if (newState === 'LEVEL_SELECT') {
+                onlineMode = false;
                 buildLevelSelectUI();
                 levelSelectScreen.classList.remove('hidden');
                 plateDisplay.style.display = 'none';
+            } else if (newState === 'ONLINE_NAME') {
+                if (nicknameInput) nicknameInput.value = playerNickname;
+                onlineNameScreen?.classList.remove('hidden');
+                plateDisplay.style.display = 'none';
+            } else if (newState === 'MATCHMAKING') {
+                matchmakingScreen?.classList.remove('hidden');
+                plateDisplay.style.display = 'none';
+            } else if (newState === 'ONLINE_COUNTDOWN') {
+                onlineCountdownScreen?.classList.remove('hidden');
+                updateBattleHud();
+                plateDisplay.style.display = 'none';
             } else if (newState === 'GAMEPLAY') {
+                onlineMode = false;
                 statusHud.style.display = 'block';
                 plateDisplay.style.display = 'block';
                 startLevel(currentLevelIndex);
+            } else if (newState === 'ONLINE_GAMEPLAY') {
+                onlineMode = true;
+                currentLevelIndex = 0;
+                statusHud.style.display = 'block';
+                plateDisplay.style.display = 'block';
+                startLevel(currentLevelIndex);
+                updateBattleHud();
             } else if (newState === 'LEVEL_RESULT') {
                 showResultScreen();
+                plateDisplay.style.display = 'none';
+            } else if (newState === 'ONLINE_RESULT') {
+                showOnlineResultScreen();
                 plateDisplay.style.display = 'none';
             }
 
@@ -1279,8 +2087,15 @@
         // --- ?����?豢??��?憪��? ---
         function buildLevelSelectUI() {
             levelGrid.innerHTML = '';
-            const backButton = levelSelectScreen.querySelector('.btn');
+            const backButton = levelSelectScreen.querySelector('button[onclick*="TITLE"]');
             if (backButton) backButton.textContent = '回到標題';
+
+            if (nicknameChip) nicknameChip.textContent = playerNickname || '尚未設定稱號';
+            if (levelOnlineButton) {
+                levelOnlineButton.disabled = !isFirebaseConfigured();
+                levelOnlineButton.textContent = isFirebaseConfigured() ? '線上對戰' : '尚未設定線上服務';
+                levelOnlineButton.title = isFirebaseConfigured() ? '隨機配對線上玩家' : '請先填入 FIREBASE_CONFIG';
+            }
 
             LEVELS.forEach((level, index) => {
                 const isLocked = index > 0 && saveMemory.stars[index - 1] < 2;
@@ -1311,6 +2126,14 @@
                         action: () => openTitleDoor()
                     });
                 }
+            } else if (macroState === 'ONLINE_NAME') {
+                ['btn-name-single', 'btn-name-online'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) registeredUiElements.push({ el: btn, action: () => btn.click() });
+                });
+            } else if (macroState === 'MATCHMAKING') {
+                const btn = document.getElementById('btn-cancel-matchmaking');
+                if (btn) registeredUiElements.push({ el: btn, action: () => btn.click() });
             } else if (macroState === 'LEVEL_SELECT') {
                 const cards = levelGrid.querySelectorAll('.level-card:not(.locked)');
                 cards.forEach((card) => {
@@ -1329,6 +2152,13 @@
                         action: () => backBtn.click()
                     });
                 }
+                [levelOnlineButton, editNicknameButton].forEach(btn => {
+                    if (btn) registeredUiElements.push({ el: btn, action: () => btn.click() });
+                });
+            } else if (macroState === 'ONLINE_GAMEPLAY') {
+                battleItemSlots.forEach((slot, index) => {
+                    if (slot && battleItems[index]) registeredUiElements.push({ el: slot, action: () => useBattleItem(index) });
+                });
             } else if (macroState === 'LEVEL_RESULT') {
                 const btns = resultScreen.querySelectorAll('.btn');
                 btns.forEach(btn => {
@@ -1339,6 +2169,9 @@
                         });
                     }
                 });
+            } else if (macroState === 'ONLINE_RESULT') {
+                const btns = onlineResultScreen?.querySelectorAll('.btn') || [];
+                btns.forEach(btn => registeredUiElements.push({ el: btn, action: () => btn.click() }));
             }
 
             registeredUiElements.forEach(item => {
@@ -1351,8 +2184,16 @@
             score = 0;
             scoreDisplay.innerText = score;
             targetDisplay.innerText = levelData.targetMoney;
-            gameTimer = levelData.time;
+            gameTimer = onlineMode ? ONLINE_RULES.time : levelData.time;
             timeDisplay.innerText = gameTimer;
+            if (onlineMode) {
+                onlineServedCount = 0;
+                battleItems = [];
+                activeDebuffs = {};
+                pendingDirtyTable = false;
+                lastOnlinePublish = 0;
+                updateBattleHud();
+            }
 
             customers = [];
             if (orderContainer) orderContainer.innerHTML = '';
@@ -1399,7 +2240,16 @@
             // ?��??���貉���???
             if (gameTimerInterval) clearInterval(gameTimerInterval);
             gameTimerInterval = setInterval(() => {
-                if (macroState === 'GAMEPLAY') {
+                if (macroState === 'ONLINE_GAMEPLAY' && onlineMatchData?.endsAt) {
+                    gameTimer = Math.max(0, Math.ceil((onlineMatchData.endsAt - serverNowMs()) / 1000));
+                    timeDisplay.innerText = gameTimer;
+                    updateBattleHud();
+                    publishOnlineState();
+                    if (gameTimer <= 0) {
+                        clearInterval(gameTimerInterval);
+                        finishOnlineMatch();
+                    }
+                } else if (macroState === 'GAMEPLAY') {
                     gameTimer--;
                     timeDisplay.innerText = gameTimer;
                     if (gameTimer <= 0) {
@@ -1457,7 +2307,7 @@
 
         // --- 敺株?蝛粹??��? (Micro Location) ---
         window.setMicroLocation = function (loc, tableIdx = -1) {
-            if (macroState !== 'GAMEPLAY') return;
+            if (!isGameplayState()) return;
 
             // ?ａ??�蝛�?��?皜��?
             if (microLocation === 'COUNTER') {
@@ -1521,7 +2371,7 @@
 
         // --- Phase 2: ?���冽趙�?撠���� (Dwell Navigation) ---
         function checkDwellNavigation() {
-            if (macroState !== 'GAMEPLAY') return;
+            if (!isGameplayState()) return;
             if (Date.now() < dwellCooldown) {
                 hoverTarget = null;
                 dwellProgress = 0;
@@ -1582,7 +2432,7 @@
 
         // --- 銝駁��???����?詨��/蝯��??恍�ｇ���??Ｘ趙?��?雿?---
         function checkUiDwellActions() {
-            if (macroState === 'GAMEPLAY' || macroState === 'LOADING') return;
+            if (isGameplayState() || macroState === 'LOADING') return;
             if (Date.now() < uiDwellCooldown) {
                 if (uiHoverTarget) uiHoverTarget.classList.remove('hand-hover');
                 uiHoverTarget = null;
@@ -1706,8 +2556,23 @@
 
             Engine.update(engine, Math.min(1000 / 20, elapsedMs));
 
+            if (macroState === 'ONLINE_COUNTDOWN' && onlineMatchData?.startAt) {
+                const remainingMs = onlineMatchData.startAt - serverNowMs();
+                const count = Math.max(0, Math.ceil(remainingMs / 1000));
+                if (onlineCountdownValue) onlineCountdownValue.textContent = count > 0 ? count : 'GO';
+                gameTimer = Math.max(0, Math.ceil(((onlineMatchData.endsAt || onlineMatchData.startAt) - serverNowMs()) / 1000));
+                updateBattleHud();
+                if (remainingMs <= 0) {
+                    if (onlineMatchData.status !== 'playing' && firebaseDb && onlineMatchId) {
+                        update(ref(firebaseDb, `matches/${onlineMatchId}`), { status: 'playing' }).catch(() => {});
+                    }
+                    changeMacroState('ONLINE_GAMEPLAY');
+                }
+            }
+
             // 摰Ｖ犖?��??�頛�
-            if (macroState === 'GAMEPLAY') {
+            if (macroState === 'GAMEPLAY' || macroState === 'ONLINE_GAMEPLAY') {
+                applyPendingDirtyTable();
                 customerSpawnTimer -= frameScale;
                 // ?�鋆�??customers.length < LEVELS[currentLevelIndex].tables 隞?”?��?蝛箔??��?靘���啣恥鈭�??
                 // 蝑��?敺?Phase 4嚗��??��������?隞嗆��??(瑹�瑼�?��?鈭箸�� + ?券??�雿��?鈭箸��) < 蝮賢漣雿����
@@ -1748,7 +2613,10 @@
                     let c = customers[i];
                     // ?���其���?銝��?擗?(WAITING_FOOD) ?�撣豢���??冽?瑼舫?擗��??��? (憭批?隤踵��)
                     // 摰Ｖ犖?��?銝��??�摨西矽��� (暺��?敺?0.04 -> 0.02嚗��?擗��? 0.01 -> 0.006)
-                    const patienceLoss = (c.state === 'WAITING_FOOD') ? 0.006 : 0.02;
+                    let patienceLoss = (c.state === 'WAITING_FOOD') ? 0.006 : 0.02;
+                    if (activeDebuffs.rushHourUntil && performance.now() < activeDebuffs.rushHourUntil) {
+                        patienceLoss *= 1.8;
+                    }
                     c.patience -= patienceLoss * frameScale;
 
                     if (c.state === 'ORDERING' && c.patience < 50 && !c.counterReminderPlayed) {
@@ -1816,7 +2684,7 @@
             ctx.drawImage(video, 0, 0, GAME_WIDTH, GAME_HEIGHT);
 
             // ?寞??�?��?瘛梯???
-            ctx.fillStyle = macroState === 'GAMEPLAY' ? 'rgba(10, 15, 20, 0.75)' : 'rgba(10, 15, 20, 0.85)';
+            ctx.fillStyle = isGameplayState() ? 'rgba(10, 15, 20, 0.75)' : 'rgba(10, 15, 20, 0.85)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             ctx.restore();
 
@@ -1830,7 +2698,7 @@
 
             handleHandLogic(); // ?瑁??����?�頛� (UI?文??����?�摨扳���?)
 
-            if (macroState === 'GAMEPLAY') {
+            if (isGameplayState()) {
                 updateOrderUI(); // ?湔��?���刻�����??
                 handleFaceLogic();
                 updatePots();
@@ -1841,7 +2709,7 @@
             drawTipOverlay();
 
             if (handResult && handResult.landmarks) {
-                const isWipeMode = (macroState === 'GAMEPLAY' && microLocation === 'TABLE_CLEANING' && cleaningSubState === 'WIPE_TABLE');
+                const isWipeMode = (isGameplayState() && microLocation === 'TABLE_CLEANING' && cleaningSubState === 'WIPE_TABLE');
                 handResult.handednesses.forEach((h, idx) => {
                     const isRight = h[0].categoryName === 'Left'; // ?∪??��?
                     drawFirstPersonHand(handResult.landmarks[idx], isRight, isWipeMode, handCtx);
@@ -1941,7 +2809,7 @@
         }
 
         function updateOrderUI() {
-            if (macroState !== 'GAMEPLAY' || microLocation !== 'KITCHEN') {
+            if ((macroState !== 'GAMEPLAY' && macroState !== 'ONLINE_GAMEPLAY') || microLocation !== 'KITCHEN') {
                 orderContainer.innerHTML = '';
                 return;
             }
@@ -1952,6 +2820,7 @@
             // ?�憿舐內�??券?擗��?蝑��??�摰Ｖ�?
             const pendingCustomers = customers.filter(c => c.state === 'WAITING_FOOD');
             
+            const isConfused = activeDebuffs.confuseOrderUntil && performance.now() < activeDebuffs.confuseOrderUntil;
             let html = '';
             pendingCustomers.forEach((c, index) => {
                 const icon = '🍝';
@@ -1967,7 +2836,7 @@
                 const color = c.patience > 60 ? '#27ae60' : (c.patience > 30 ? '#f39c12' : '#e74c3c');
 
                 html += `
-                    <div class="order-card ${index === 0 ? 'is-active' : ''}">
+                    <div class="order-card ${index === 0 ? 'is-active' : ''} ${isConfused ? 'confused' : ''}">
                         <div class="order-patience-bg">
                             <div class="order-patience-fill" style="width: ${c.patience}%; background: ${color}"></div>
                         </div>
@@ -2006,7 +2875,7 @@
                 const py = palm.y * GAME_HEIGHT;
                 activeHandPositions.push({ x: px, y: py, isRight: true, isFist: isFistGesture(landmarks) });
 
-                if (macroState === 'GAMEPLAY') {
+                if (isGameplayState()) {
                     if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
                         Body.setPosition(rightHandBody, { x: -100, y: -100 });
                     } else {
@@ -2026,7 +2895,7 @@
                 const py = palm.y * GAME_HEIGHT;
                 activeHandPositions.push({ x: px, y: py, isRight: false, isFist: isFistGesture(landmarks) });
 
-                if (macroState === 'GAMEPLAY') {
+                if (isGameplayState()) {
                     if (microLocation === 'DINING_ROOM' && cleaningSubState === 'WIPE_TABLE') {
                         Body.setPosition(leftHandBody, { x: -100, y: -100 });
                     } else {
@@ -2040,7 +2909,7 @@
             }
 
             // --- 蝯曹??��?蝛粹??�頛� (靘��??園??啁? activeHandPositions) ---
-            if (macroState === 'GAMEPLAY') {
+            if (isGameplayState()) {
                 if (microLocation === 'TABLE_CLEANING') {
                     // ?孵神?行��?�頛� (?��??���航孛���)
                     if (cleaningSubState === 'WIPE_TABLE' && currentCleaningTable !== -1) {
@@ -2242,7 +3111,7 @@
                             const dist = Math.hypot(px - lastPos.x, py - lastPos.y);
                             stirProgress += dist;
                             if (dist > 12) playSound('stir', 0.26, 180);
-                            if (stirProgress > STIR_THRESHOLD) {
+                            if (stirProgress > STIR_THRESHOLD * getDebuffProgressMultiplier()) {
                                 cookState = 'SERVE';
                                 dragItems[handSide] = null;
                                 playSound('success', 0.65, 400);
@@ -2268,6 +3137,7 @@
                             if (target) {
                                 target.hasPasta = true;
                                 updateScore(25);
+                                grantBattleItemIfNeeded();
                                 showTip('餐點完成，請送到出餐口');
                                 playSound('serve', 0.75, 300);
                                 checkCustomerDone(target);
@@ -2428,7 +3298,7 @@
                 ctx.strokeStyle = '#f1c40f';
                 ctx.lineWidth = 6;
                 ctx.beginPath();
-                const stirRatio = Math.min(1, stirProgress / STIR_THRESHOLD);
+                const stirRatio = Math.min(1, stirProgress / (STIR_THRESHOLD * getDebuffProgressMultiplier()));
                 ctx.arc(plateArea.x + plateArea.w / 2, plateArea.y + plateArea.h / 2, Math.min(plateArea.w, plateArea.h) * 0.48, -Math.PI / 2, -Math.PI / 2 + stirRatio * Math.PI * 2);
                 ctx.stroke();
             }
@@ -2474,7 +3344,7 @@
                     // ?芣??��??��?蝘餅?閮��? (?����?���刻歲�??��??�隤�?歹?靘��? > 200px)
                     if (dist < 200) {
                         scrubAccumulator += dist;
-                        washingPlate.dirtAmount = 100 - (scrubAccumulator / SCRUB_THRESHOLD) * 100;
+                        washingPlate.dirtAmount = 100 - (scrubAccumulator / (SCRUB_THRESHOLD * getDebuffProgressMultiplier())) * 100;
                         if (dist > 8) playSound('wash', 0.32, 170);
                     }
 
@@ -2600,7 +3470,7 @@
             }
 
             // --- 蝜芾ˊ UI 皛舐??脣漲??---
-            if (macroState !== 'GAMEPLAY' && uiDwellProgress > 0 && uiDwellHandSide === handSide) {
+            if (!isGameplayState() && uiDwellProgress > 0 && uiDwellHandSide === handSide) {
                 const r = 45;
                 drawCtx.beginPath();
                 drawCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -2817,7 +3687,7 @@
                     ctx.fillText('在盤子上快速來回搓洗', washingPlate.x + 150, washingPlate.y - 40);
 
                     // 憿舐內?脣漲?曉?瘥?
-                    const progress = Math.floor(Math.min(100, (scrubAccumulator / SCRUB_THRESHOLD) * 100));
+                    const progress = Math.floor(Math.min(100, (scrubAccumulator / (SCRUB_THRESHOLD * getDebuffProgressMultiplier())) * 100));
                     ctx.fillStyle = '#f1c40f';
                     ctx.font = 'bold 32px Arial';
                     ctx.fillText(`洗盤進度: ${progress}%`, washingPlate.x + 150, washingPlate.y - 10);
@@ -3032,6 +3902,8 @@
         function updateScore(delta) {
             score += delta;
             scoreDisplay.innerText = score;
+            updateBattleHud();
+            publishOnlineState(true);
             if (delta > 0) {
                 scoreDisplay.style.color = '#2ecc71';
             } else {
@@ -3041,6 +3913,7 @@
         }
 
         function updateReviews() {
+            publishOnlineState(true);
             if (negativeReviews > 0) {
                 reviewDisplay.style.display = 'inline-block';
                 reviewDisplay.innerText = `?�� 鞎��?: ${negativeReviews}`;
