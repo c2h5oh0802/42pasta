@@ -695,6 +695,41 @@
             color: #a93226;
         }
 
+        .match-found-names {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            align-items: center;
+            gap: 12px;
+            margin: 10px 0 16px;
+        }
+
+        .match-player {
+            min-width: 0;
+            padding: 12px 14px;
+            color: #3b2316;
+            background: rgba(255, 249, 233, 0.92);
+            border: 2px solid rgba(91, 55, 30, 0.55);
+            border-radius: 6px;
+            box-shadow: 0 5px 0 rgba(95, 52, 27, 0.28);
+            font-size: clamp(18px, 2vw, 25px);
+            font-weight: 900;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .match-versus {
+            color: #8f2e22;
+            font-size: clamp(18px, 2vw, 24px);
+            font-weight: 950;
+        }
+
+        @media (max-width: 640px) {
+            .match-found-names {
+                grid-template-columns: 1fr;
+            }
+        }
+
         #battle-hud {
             position: absolute;
             top: 14px;
@@ -948,6 +983,18 @@
             </div>
         </div>
 
+        <div id="match-found-screen" class="panel-overlay hidden">
+            <div class="online-card">
+                <h2>配對成功</h2>
+                <div class="match-found-names">
+                    <div class="match-player" id="match-found-me">玩家</div>
+                    <div class="match-versus">VS</div>
+                    <div class="match-player" id="match-found-opponent">對手</div>
+                </div>
+                <div id="match-found-status" class="online-status">準備開始...</div>
+            </div>
+        </div>
+
         <div id="online-countdown-screen" class="panel-overlay hidden">
             <div class="online-card">
                 <h2>對戰開始</h2>
@@ -1064,7 +1111,7 @@
             appId: "1:795343470431:web:d41990c4f610fc399300ea",
             measurementId: "G-YZ7SELL8NX"
         };
-        const ONLINE_RULES = { time: 120, itemEveryServes: 3, maxItems: 2 };
+        const ONLINE_RULES = { time: 120, matchIntroMs: 7000, countdownMs: 3000, itemEveryServes: 3, maxItems: 2 };
         const BATTLE_ITEMS = {
             RUSH_HOUR: { name: '尖峰時刻', icon: 'assets/img/items/shaker.png' },
             DIRTY_TABLE: { name: '髒桌突襲', icon: 'assets/img/items/table-stain.png' },
@@ -1226,11 +1273,15 @@
         const titleHint = document.getElementById('title-hint');
         const onlineNameScreen = document.getElementById('online-name-screen');
         const matchmakingScreen = document.getElementById('matchmaking-screen');
+        const matchFoundScreen = document.getElementById('match-found-screen');
         const onlineCountdownScreen = document.getElementById('online-countdown-screen');
         const onlineResultScreen = document.getElementById('online-result-screen');
         const nicknameInput = document.getElementById('nickname-input');
         const onlineNameStatus = document.getElementById('online-name-status');
         const matchmakingStatus = document.getElementById('matchmaking-status');
+        const matchFoundMe = document.getElementById('match-found-me');
+        const matchFoundOpponent = document.getElementById('match-found-opponent');
+        const matchFoundStatus = document.getElementById('match-found-status');
         const onlineCountdownValue = document.getElementById('online-countdown-value');
         const battleHud = document.getElementById('battle-hud');
         const battleMyScoreEl = document.getElementById('battle-my-score');
@@ -1688,7 +1739,7 @@
 
                 if (opponentEntry) {
                     const matchRef = push(ref(firebaseDb, 'matches'));
-                    const startAt = serverNowMs() + 5000;
+                    const startAt = serverNowMs() + ONLINE_RULES.matchIntroMs;
                     const endsAt = startAt + ONLINE_RULES.time * 1000;
                     await set(matchRef, {
                         status: 'countdown',
@@ -1740,7 +1791,7 @@
             onlineMatchId = matchId;
             onlineResultSubmitted = false;
             processedOnlineEvents = new Set();
-            changeMacroState('ONLINE_COUNTDOWN');
+            changeMacroState('MATCH_FOUND');
             const matchRef = ref(firebaseDb, `matches/${matchId}`);
             matchUnsub = onValue(matchRef, snapshot => {
                 onlineMatchData = snapshot.val();
@@ -1756,7 +1807,11 @@
                 updateBattleHud();
 
                 if (onlineMatchData.status === 'countdown') {
-                    changeMacroState('ONLINE_COUNTDOWN');
+                    if (macroState !== 'MATCH_FOUND' && macroState !== 'ONLINE_COUNTDOWN') {
+                        changeMacroState('MATCH_FOUND');
+                    } else if (macroState === 'MATCH_FOUND') {
+                        updateMatchFoundScreen();
+                    }
                 } else if (onlineMatchData.status === 'playing' && macroState !== 'ONLINE_GAMEPLAY') {
                     changeMacroState('ONLINE_GAMEPLAY');
                 } else if (onlineMatchData.status === 'finished' && macroState !== 'ONLINE_RESULT') {
@@ -1803,6 +1858,15 @@
                 slot.innerHTML = itemKey ? `<img src="${BATTLE_ITEMS[itemKey].icon}" alt="${BATTLE_ITEMS[itemKey].name}">` : '';
                 slot.title = itemKey ? BATTLE_ITEMS[itemKey].name : '空道具槽';
             });
+        }
+
+        function updateMatchFoundScreen() {
+            if (matchFoundMe) matchFoundMe.textContent = playerNickname || '玩家';
+            if (matchFoundOpponent) matchFoundOpponent.textContent = opponentState?.nickname || '對手';
+            if (matchFoundStatus) {
+                const count = onlineMatchData?.startAt ? Math.max(0, Math.ceil((onlineMatchData.startAt - serverNowMs()) / 1000)) : 0;
+                matchFoundStatus.textContent = count > Math.ceil(ONLINE_RULES.countdownMs / 1000) ? `${count} 秒後開始` : '準備倒數...';
+            }
         }
 
         function grantBattleItemIfNeeded() {
@@ -1873,6 +1937,7 @@
         function isOnlineOverlayState() {
             return macroState === 'ONLINE_NAME'
                 || macroState === 'MATCHMAKING'
+                || macroState === 'MATCH_FOUND'
                 || macroState === 'ONLINE_COUNTDOWN'
                 || macroState === 'ONLINE_RESULT';
         }
@@ -2005,6 +2070,7 @@
             titleScreen.classList.add('hidden');
             onlineNameScreen?.classList.add('hidden');
             matchmakingScreen?.classList.add('hidden');
+            matchFoundScreen?.classList.add('hidden');
             onlineCountdownScreen?.classList.add('hidden');
             onlineResultScreen?.classList.add('hidden');
             levelSelectScreen.classList.add('hidden');
@@ -2031,6 +2097,11 @@
                 plateDisplay.style.display = 'none';
             } else if (newState === 'MATCHMAKING') {
                 matchmakingScreen?.classList.remove('hidden');
+                plateDisplay.style.display = 'none';
+            } else if (newState === 'MATCH_FOUND') {
+                matchFoundScreen?.classList.remove('hidden');
+                updateMatchFoundScreen();
+                updateBattleHud();
                 plateDisplay.style.display = 'none';
             } else if (newState === 'ONLINE_COUNTDOWN') {
                 onlineCountdownScreen?.classList.remove('hidden');
@@ -2536,6 +2607,14 @@
             }
 
             // 摰Ｖ犖?��??�頛�
+            if (macroState === 'MATCH_FOUND' && onlineMatchData?.startAt) {
+                const remainingMs = onlineMatchData.startAt - serverNowMs();
+                updateMatchFoundScreen();
+                if (remainingMs <= ONLINE_RULES.countdownMs) {
+                    changeMacroState('ONLINE_COUNTDOWN');
+                }
+            }
+
             if (macroState === 'GAMEPLAY' || macroState === 'ONLINE_GAMEPLAY') {
                 applyPendingDirtyTable();
                 customerSpawnTimer -= frameScale;
