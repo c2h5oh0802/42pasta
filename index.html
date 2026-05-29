@@ -695,53 +695,6 @@
             color: #a93226;
         }
 
-        #level-online-actions {
-            position: absolute;
-            top: 56.5%;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: min(520px, 82%);
-            pointer-events: auto;
-        }
-
-        .level-online-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        #level-online-actions .btn {
-            margin: 0;
-            padding: 10px 20px;
-            font-size: clamp(16px, 1.8vw, 21px);
-        }
-
-        .nickname-chip {
-            box-sizing: border-box;
-            max-width: min(420px, 100%);
-            min-width: min(320px, 100%);
-            overflow: hidden;
-            padding: 9px 18px 10px;
-            color: #3b2316;
-            background: rgba(255, 246, 218, 0.94);
-            border: 2px solid rgba(91, 55, 30, 0.72);
-            border-radius: 6px;
-            box-shadow: 0 5px 0 rgba(95, 52, 27, 0.45), 0 10px 18px rgba(50, 25, 12, 0.18);
-            font-size: clamp(17px, 1.8vw, 22px);
-            font-weight: 900;
-            line-height: 1.15;
-            text-align: center;
-            text-overflow: ellipsis;
-            text-shadow: 0 1px 0 rgba(255, 245, 216, 0.85);
-            white-space: nowrap;
-        }
-
         #battle-hud {
             position: absolute;
             top: 14px;
@@ -1007,15 +960,8 @@
             <div class="level-grid" id="level-grid-container">
                 <!-- ??JS ?��??��? -->
             </div>
-            <div id="level-online-actions">
-                <span class="nickname-chip" id="nickname-chip"></span>
-                <div class="level-online-buttons">
-                    <button class="btn" id="btn-level-online" type="button">線上對戰</button>
-                    <button class="btn" id="btn-edit-nickname" type="button">修改稱號</button>
-                </div>
-            </div>
-            <button class="btn" onclick="changeMacroState('TITLE')"
-                style="margin-top: 40px; background:#7f8c8d; box-shadow: 0 4px 0 #546e7a;">返回標題</button>
+            <button class="btn" onclick="changeMacroState('ONLINE_NAME')"
+                style="margin-top: 40px; background:#7f8c8d; box-shadow: 0 4px 0 #546e7a;">回主選單</button>
         </div>
 
         <!-- 蝯��??恍�� (LEVEL_RESULT) -->
@@ -1291,9 +1237,6 @@
         const battleOpponentScoreEl = document.getElementById('battle-opponent-score');
         const battleTimeEl = document.getElementById('battle-time');
         const battleItemSlots = [document.getElementById('battle-item-0'), document.getElementById('battle-item-1')];
-        const nicknameChip = document.getElementById('nickname-chip');
-        const levelOnlineButton = document.getElementById('btn-level-online');
-        const editNicknameButton = document.getElementById('btn-edit-nickname');
         const levelSelectScreen = document.getElementById('level-select-screen');
         const resultScreen = document.getElementById('result-screen');
         const levelGrid = document.getElementById('level-grid-container');
@@ -1647,7 +1590,6 @@
                 return false;
             }
             localStorage.setItem('42PastaNickname', playerNickname);
-            if (nicknameChip) nicknameChip.textContent = `玩家稱號：${playerNickname}`;
             if (onlineNameStatus) {
                 onlineNameStatus.textContent = '';
                 onlineNameStatus.classList.remove('online-error');
@@ -1658,7 +1600,6 @@
         function loadPlayerNickname() {
             playerNickname = sanitizeNickname(localStorage.getItem('42PastaNickname') || '');
             if (nicknameInput) nicknameInput.value = playerNickname;
-            if (nicknameChip) nicknameChip.textContent = playerNickname ? `玩家稱號：${playerNickname}` : '尚未設定稱號';
         }
 
         function setOnlineStatus(text, isError = false) {
@@ -2013,18 +1954,10 @@
             if (saveNicknameFromInput()) changeMacroState('LEVEL_SELECT');
         });
         document.getElementById('btn-name-online')?.addEventListener('click', startOnlineMatchmaking);
-        levelOnlineButton?.addEventListener('click', () => {
-            if (!playerNickname) {
-                changeMacroState('ONLINE_NAME');
-                return;
-            }
-            startOnlineMatchmaking();
-        });
-        editNicknameButton?.addEventListener('click', () => changeMacroState('ONLINE_NAME'));
         document.getElementById('btn-cancel-matchmaking')?.addEventListener('click', async () => {
             await leaveMatchmaking();
             resetOnlineRoundState();
-            changeMacroState('LEVEL_SELECT');
+            changeMacroState('ONLINE_NAME');
         });
         document.getElementById('btn-online-again')?.addEventListener('click', async () => {
             cleanupOnlineListeners();
@@ -2034,7 +1967,7 @@
         document.getElementById('btn-online-back')?.addEventListener('click', () => {
             cleanupOnlineListeners();
             resetOnlineRoundState();
-            changeMacroState('LEVEL_SELECT');
+            changeMacroState('ONLINE_NAME');
         });
         battleItemSlots.forEach((slot, index) => {
             slot?.addEventListener('click', () => useBattleItem(index));
@@ -2129,15 +2062,8 @@
         // --- ?����?豢??��?憪��? ---
         function buildLevelSelectUI() {
             levelGrid.innerHTML = '';
-            const backButton = levelSelectScreen.querySelector('button[onclick*="TITLE"]');
-            if (backButton) backButton.textContent = '回到標題';
-
-            if (nicknameChip) nicknameChip.textContent = playerNickname ? `玩家稱號：${playerNickname}` : '尚未設定稱號';
-            if (levelOnlineButton) {
-                levelOnlineButton.disabled = !isFirebaseConfigured();
-                levelOnlineButton.textContent = isFirebaseConfigured() ? '線上對戰' : '尚未設定線上服務';
-                levelOnlineButton.title = isFirebaseConfigured() ? '隨機配對線上玩家' : '請先填入 FIREBASE_CONFIG';
-            }
+            const backButton = levelSelectScreen.querySelector('button[onclick*="ONLINE_NAME"]');
+            if (backButton) backButton.textContent = '回主選單';
 
             LEVELS.forEach((level, index) => {
                 const isLocked = index > 0 && saveMemory.stars[index - 1] < 2;
@@ -2194,9 +2120,6 @@
                         action: () => backBtn.click()
                     });
                 }
-                [levelOnlineButton, editNicknameButton].forEach(btn => {
-                    if (btn) registeredUiElements.push({ el: btn, action: () => btn.click() });
-                });
             } else if (macroState === 'ONLINE_GAMEPLAY') {
                 battleItemSlots.forEach((slot, index) => {
                     if (slot && battleItems[index]) registeredUiElements.push({ el: slot, action: () => useBattleItem(index) });
