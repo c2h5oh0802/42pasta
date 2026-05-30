@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>42號義麵店｜項目技術與架構說明</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #263238;
+            --muted: #607d8b;
+            --paper: #fffdf7;
+            --line: #d8cdbb;
+            --accent: #b93f2e;
+            --accent-2: #2e7d68;
+            --accent-3: #efb74f;
+            --panel: #ffffff;
+            --soft: #f4eee3;
+            --code: #263238;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            background:
+                linear-gradient(rgba(255, 253, 247, 0.94), rgba(255, 253, 247, 0.96)),
+                url("assets/img/bg/櫃台.png") center / cover fixed;
+            font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+            line-height: 1.75;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration-thickness: 2px;
+            text-underline-offset: 3px;
+        }
+
+        .shell {
+            width: min(1120px, calc(100% - 36px));
+            margin: 0 auto;
+        }
+
+        header {
+            padding: 56px 0 30px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+            gap: 28px;
+            align-items: end;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 16px;
+            color: #2a160f;
+            font-size: clamp(34px, 6vw, 68px);
+            line-height: 1.05;
+            letter-spacing: 0;
+        }
+
+        h2 {
+            margin-bottom: 18px;
+            font-size: 30px;
+            line-height: 1.25;
+        }
+
+        h3 {
+            margin-bottom: 8px;
+            font-size: 20px;
+            line-height: 1.35;
+        }
+
+        .lead {
+            max-width: 760px;
+            margin-bottom: 24px;
+            color: #3e4d52;
+            font-size: 19px;
+        }
+
+        .hero-shot {
+            min-height: 280px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            background: url("assets/img/bg/標題開門.png") center / cover;
+            box-shadow: 0 20px 48px rgba(43, 31, 20, 0.22);
+        }
+
+        .quick-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 38px;
+            padding: 7px 13px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.72);
+            color: var(--ink);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        main {
+            padding-bottom: 58px;
+        }
+
+        section {
+            padding: 34px 0;
+            border-top: 1px solid rgba(109, 86, 56, 0.2);
+        }
+
+        .summary-grid,
+        .tech-grid,
+        .file-grid,
+        .state-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .card,
+        .flow-step,
+        .file-item,
+        .state-item,
+        .note {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.82);
+            box-shadow: 0 12px 28px rgba(43, 31, 20, 0.08);
+        }
+
+        .card,
+        .file-item,
+        .state-item,
+        .note {
+            padding: 18px;
+        }
+
+        .tag {
+            display: inline-flex;
+            margin-bottom: 10px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: #efe1ca;
+            color: #6f3a23;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .card p,
+        .file-item p,
+        .state-item p,
+        .note p {
+            margin-bottom: 0;
+            color: var(--muted);
+        }
+
+        .diagram {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        .flow-step {
+            position: relative;
+            min-height: 148px;
+            padding: 16px;
+        }
+
+        .flow-step:not(:last-child)::after {
+            content: ">";
+            position: absolute;
+            top: 50%;
+            right: -13px;
+            z-index: 1;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 900;
+            line-height: 24px;
+            text-align: center;
+            transform: translateY(-50%);
+        }
+
+        .flow-step strong {
+            display: block;
+            margin-bottom: 7px;
+            color: #2a160f;
+        }
+
+        .flow-step span {
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .stack-list {
+            display: grid;
+            grid-template-columns: 220px minmax(0, 1fr);
+            gap: 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.84);
+        }
+
+        .stack-list dt,
+        .stack-list dd {
+            margin: 0;
+            padding: 15px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .stack-list dt {
+            background: rgba(244, 238, 227, 0.9);
+            font-weight: 900;
+        }
+
+        .stack-list dd {
+            color: var(--muted);
+        }
+
+        .stack-list dt:last-of-type,
+        .stack-list dd:last-of-type {
+            border-bottom: 0;
+        }
+
+        code {
+            padding: 2px 6px;
+            border-radius: 5px;
+            background: #243037;
+            color: #fff2d5;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.94em;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 18px;
+        }
+
+        .note {
+            border-left: 6px solid var(--accent-2);
+        }
+
+        .note.warning {
+            border-left-color: var(--accent-3);
+        }
+
+        footer {
+            padding: 26px 0 42px;
+            color: var(--muted);
+            border-top: 1px solid rgba(109, 86, 56, 0.2);
+        }
+
+        @media (max-width: 900px) {
+            .hero,
+            .two-col,
+            .stack-list {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid,
+            .tech-grid,
+            .file-grid,
+            .state-grid,
+            .diagram {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .flow-step:not(:last-child)::after {
+                display: none;
+            }
+        }
+
+        @media (max-width: 620px) {
+            .shell {
+                width: min(100% - 24px, 1120px);
+            }
+
+            header {
+                padding-top: 34px;
+            }
+
+            .summary-grid,
+            .tech-grid,
+            .file-grid,
+            .state-grid,
+            .diagram {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-shot {
+                min-height: 210px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="shell">
+        <div class="hero">
+            <div>
+                <h1>42號義麵店<br>項目技術與架構說明</h1>
+                <p class="lead">
+                    這個專案是一款在瀏覽器中執行的互動式餐廳遊戲。玩家用攝影機偵測到的手勢與笑容操作遊戲，單人模式全部在前端完成，線上對戰與排行榜則透過 Firebase 作為後端服務。
+                </p>
+                <nav class="quick-links" aria-label="頁面導覽">
+                    <a href="#overview">一眼看懂</a>
+                    <a href="#architecture">架構流程</a>
+                    <a href="#frontend">前端</a>
+                    <a href="#backend">後端串聯</a>
+                    <a href="#files">檔案分工</a>
+                    <a href="#run">如何執行</a>
+                </nav>
+            </div>
+            <div class="hero-shot" role="img" aria-label="42號義麵店遊戲標題畫面"></div>
+        </div>
+    </header>
+
+    <main class="shell">
+        <section id="overview">
+            <h2>一眼看懂</h2>
+            <div class="summary-grid">
+                <article class="card">
+                    <span class="tag">專案類型</span>
+                    <h3>瀏覽器單頁遊戲</h3>
+                    <p>主要入口是 <code>index.html</code>，HTML、CSS、JavaScript 都集中在同一個檔案中。</p>
+                </article>
+                <article class="card">
+                    <span class="tag">操作方式</span>
+                    <h3>攝影機手勢與表情</h3>
+                    <p>MediaPipe 讀取鏡頭影像，偵測雙手位置、握拳與笑容，再轉成遊戲操作。</p>
+                </article>
+                <article class="card">
+                    <span class="tag">線上功能</span>
+                    <h3>Firebase 即時同步</h3>
+                    <p>Firebase Auth 提供匿名玩家身分，Realtime Database 儲存配對、對戰狀態、道具事件與排行榜。</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <h2>整體架構流程</h2>
+            <div class="diagram" aria-label="從玩家到畫面與後端的資料流程">
+                <div class="flow-step">
+                    <strong>1. 玩家</strong>
+                    <span>打開網頁，允許瀏覽器使用攝影機。</span>
+                </div>
+                <div class="flow-step">
+                    <strong>2. MediaPipe</strong>
+                    <span>每一幀分析影像，輸出臉部與手部 landmark。</span>
+                </div>
+                <div class="flow-step">
+                    <strong>3. 遊戲邏輯</strong>
+                    <span>依據手勢、笑容、時間、訂單、桌位與盤子數更新狀態。</span>
+                </div>
+                <div class="flow-step">
+                    <strong>4. Canvas + HTML UI</strong>
+                    <span>Canvas 繪製場景，HTML 疊加選單、HUD、排行榜與結算畫面。</span>
+                </div>
+                <div class="flow-step">
+                    <strong>5. Firebase</strong>
+                    <span>線上模式才同步玩家分數、配對、道具事件與排行榜。</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="frontend">
+            <h2>前端怎麼運作</h2>
+            <div class="tech-grid">
+                <article class="card">
+                    <span class="tag">畫面層</span>
+                    <h3>Canvas 繪圖</h3>
+                    <p><code>game-canvas</code> 負責背景、顧客、餐點、桌面、提示與遊戲場景；<code>hand-canvas</code> 專門畫玩家手部。</p>
+                </article>
+                <article class="card">
+                    <span class="tag">UI 層</span>
+                    <h3>HTML 疊加介面</h3>
+                    <p><code>title-screen</code>、<code>level-select-screen</code>、<code>result-screen</code>、<code>leaderboard-screen</code> 等元素負責選單與結算。</p>
+                </article>
+                <article class="card">
+                    <span class="tag">主迴圈</span>
+                    <h3><code>requestAnimationFrame</code></h3>
+                    <p><code>gameLoop()</code> 每幀偵測鏡頭、更新物理、處理顧客耐心、操作邏輯，最後重畫畫面。</p>
+                </article>
+                <article class="card">
+                    <span class="tag">視覺辨識</span>
+                    <h3>MediaPipe Tasks Vision</h3>
+                    <p><code>FaceLandmarker</code> 判斷笑容接待客人，<code>HandLandmarker</code> 判斷手的位置與握拳狀態。</p>
+                </article>
+                <article class="card">
+                    <span class="tag">物理互動</span>
+                    <h3>Matter.js</h3>
+                    <p>桌面清理使用 Matter.js 的剛體與碰撞，讓垃圾、盤子、叉子等物件能被手部碰撞推動。</p>
+                </article>
+                <article class="card">
+                    <span class="tag">本機儲存</span>
+                    <h3>LocalStorage</h3>
+                    <p><code>42PastaSave</code> 儲存關卡星等，<code>42PastaNickname</code> 儲存玩家稱號。</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="backend">
+            <h2>前後端如何串聯</h2>
+            <p>
+                這個專案沒有自己寫 Node.js、PHP 或 Python 伺服器。它採用 Firebase 當後端服務，所以前端 JavaScript 會直接透過 Firebase SDK 讀寫雲端資料庫。
+            </p>
+            <dl class="stack-list">
+                <dt>身分驗證</dt>
+                <dd><code>signInAnonymously()</code> 讓每位玩家取得一個 Firebase UID，作為線上配對與排行榜的玩家 ID。</dd>
+                <dt>配對佇列</dt>
+                <dd>玩家進入線上模式後寫入 <code>queue/{playerId}</code>。如果找到等待中的玩家，就建立一筆 <code>matches/{matchId}</code>。</dd>
+                <dt>即時對戰</dt>
+                <dd><code>matches/{matchId}/players</code> 同步雙方稱號、分數、負評、已完成狀態與道具欄。</dd>
+                <dt>道具事件</dt>
+                <dd><code>matches/{matchId}/events</code> 儲存道具攻擊事件，對手端用 <code>onChildAdded()</code> 監聽並套用效果。</dd>
+                <dt>排行榜</dt>
+                <dd><code>leaderboardStats/{playerId}</code> 統計勝敗、最高分、平均分與總場次，排行榜以勝場與分數排序顯示。</dd>
+            </dl>
+        </section>
+
+        <section id="game-flow">
+            <h2>遊戲狀態與玩法流程</h2>
+            <div class="state-grid">
+                <article class="state-item">
+                    <h3>大狀態 <code>macroState</code></h3>
+                    <p>控制現在是載入、標題、輸入稱號、配對、關卡選擇、遊戲中、結算或排行榜。</p>
+                </article>
+                <article class="state-item">
+                    <h3>小場景 <code>microLocation</code></h3>
+                    <p>控制玩家所在區域，例如櫃台、用餐區、廚房、洗碗區與清桌區。</p>
+                </article>
+                <article class="state-item">
+                    <h3>料理狀態 <code>cookState</code></h3>
+                    <p>控制從放麵、煮麵、裝盤、加配料、攪拌到送餐的料理流程。</p>
+                </article>
+            </div>
+            <div class="two-col" style="margin-top: 18px;">
+                <div class="note">
+                    <h3>單人模式流程</h3>
+                    <p>載入模型與攝影機後進入標題畫面，玩家輸入稱號並選擇單人模式，接著選關、接待顧客、料理、送餐、清桌、洗碗，時間到後計算分數與星等。</p>
+                </div>
+                <div class="note warning">
+                    <h3>線上模式流程</h3>
+                    <p>玩家輸入稱號後進入 Firebase 配對。配對成功後雙方同時倒數開始，在限定時間內各自遊玩，分數與道具事件即時同步，最後送出排行榜資料。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="files">
+            <h2>檔案分工</h2>
+            <div class="file-grid">
+                <article class="file-item">
+                    <h3><code>index.html</code></h3>
+                    <p>主遊戲檔。包含版面、樣式、狀態變數、MediaPipe、Matter.js、Firebase 串接與主要遊戲邏輯。</p>
+                </article>
+                <article class="file-item">
+                    <h3><code>assets/img/</code></h3>
+                    <p>所有背景、顧客、手部、餐點、UI 按鈕、特效與道具圖片。</p>
+                </article>
+                <article class="file-item">
+                    <h3><code>assets/sound/</code></h3>
+                    <p>點餐、取物、煮麵、攪拌、送餐、洗碗、成功、錯誤等互動音效。</p>
+                </article>
+                <article class="file-item">
+                    <h3><code>DOC/</code></h3>
+                    <p>專案歷史紀錄與變更紀錄。主要實作仍以根目錄的 <code>index.html</code> 為準。</p>
+                </article>
+                <article class="file-item">
+                    <h3><code>AGENTS.md</code></h3>
+                    <p>協作規則，包含變更範圍、測試、Git commit 與錯誤處理方式。</p>
+                </article>
+                <article class="file-item">
+                    <h3><code>project-overview.html</code></h3>
+                    <p>本說明頁，讓新手快速理解專案技術、架構與前後端串聯方式。</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="run">
+            <h2>如何執行與注意事項</h2>
+            <div class="two-col">
+                <div class="note">
+                    <h3>建議執行方式</h3>
+                    <p>因為遊戲需要攝影機權限與外部 CDN，建議用本機伺服器或 HTTPS 開啟 <code>index.html</code>。若直接用檔案開啟，瀏覽器可能阻擋攝影機。</p>
+                </div>
+                <div class="note warning">
+                    <h3>網路需求</h3>
+                    <p>MediaPipe 模型、Matter.js、Firebase SDK 都從網路載入。離線時遊戲可能無法完成初始化，線上對戰與排行榜也無法使用。</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="shell">
+        <p>文件目的：讓第一次接觸專案的人，先看懂「玩家操作如何進入遊戲邏輯」以及「前端如何透過 Firebase 完成線上功能」。</p>
+    </footer>
+</body>
+
+</html>
