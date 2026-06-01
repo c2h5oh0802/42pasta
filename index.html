@@ -2180,16 +2180,27 @@
             if (!result?.committed) throw new Error('leaderboard submit failed');
         }
 
-        function listenLeaderboard() {
+        function getSortedLeaderboardRows(snapshot) {
+            const rows = [];
+            snapshot?.forEach(childSnap => rows.push({ id: childSnap.key, ...childSnap.val() }));
+            return rows
+                .sort((a, b) => (b.wins || 0) - (a.wins || 0)
+                    || (b.bestScore || 0) - (a.bestScore || 0)
+                    || (b.averageScore || 0) - (a.averageScore || 0))
+                .slice(0, 50);
+        }
+
+        async function listenLeaderboard() {
             if (!firebaseDb) return;
             if (leaderboardUnsub) leaderboardUnsub();
-            leaderboardUnsub = onValue(query(ref(firebaseDb, 'leaderboardStats'), orderByChild('wins'), limitToLast(50)), snapshot => {
-                const rows = [];
-                snapshot.forEach(childSnap => rows.push({ id: childSnap.key, ...childSnap.val() }));
-                rows.sort((a, b) => (b.wins || 0) - (a.wins || 0)
-                    || (b.bestScore || 0) - (a.bestScore || 0)
-                    || (b.averageScore || 0) - (a.averageScore || 0));
-                renderLeaderboard(rows);
+            const statsRef = ref(firebaseDb, 'leaderboardStats');
+            const snapshot = await get(statsRef).catch(err => {
+                console.error('Leaderboard load failed', err);
+                return null;
+            });
+            if (snapshot) renderLeaderboard(getSortedLeaderboardRows(snapshot));
+            leaderboardUnsub = onValue(statsRef, snapshot => {
+                renderLeaderboard(getSortedLeaderboardRows(snapshot));
             });
         }
 
