@@ -1180,7 +1180,6 @@
             appId: "1:795343470431:web:d41990c4f610fc399300ea",
             measurementId: "G-YZ7SELL8NX"
         };
-        const LEADERBOARD_RESET_VERSION = 'result-fix-20260601';
         const ONLINE_RULES = { time: 120, matchIntroMs: 7000, countdownMs: 3000, itemEveryServes: 3, maxItems: 2 };
         const BATTLE_ITEMS = {
             RUSH_HOUR: { name: '尖峰時刻', icon: 'assets/img/items/shaker.png' },
@@ -1770,23 +1769,6 @@
                 });
             }
             onlinePlayerId = firebaseAuth.currentUser.uid;
-            await resetWrongLeaderboardOnce();
-        }
-
-        async function resetWrongLeaderboardOnce() {
-            if (!firebaseDb) return;
-            const resetRef = ref(firebaseDb, 'maintenance/leaderboardResetVersion');
-            const snapshot = await get(resetRef).catch(() => null);
-            if (snapshot?.val?.() === LEADERBOARD_RESET_VERSION) return;
-            try {
-                await Promise.all([
-                    remove(ref(firebaseDb, 'leaderboard')),
-                    remove(ref(firebaseDb, 'leaderboardStats'))
-                ]);
-                await set(resetRef, LEADERBOARD_RESET_VERSION);
-            } catch (err) {
-                console.error('Leaderboard reset failed', err);
-            }
         }
 
         function serverNowMs() {
