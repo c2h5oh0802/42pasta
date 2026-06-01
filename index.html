@@ -796,6 +796,7 @@
             box-sizing: border-box;
             display: grid;
             place-items: center;
+            position: relative;
             background: rgba(255, 244, 205, 0.12);
             border: 1px solid rgba(255, 230, 160, 0.38);
             border-radius: 6px;
@@ -807,6 +808,29 @@
             max-width: 48px;
             max-height: 44px;
             pointer-events: none;
+        }
+
+        .battle-item-slot::after {
+            content: attr(data-gesture);
+            position: absolute;
+            right: 3px;
+            bottom: 3px;
+            min-width: 16px;
+            height: 16px;
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            background: rgba(51, 28, 13, 0.86);
+            color: #fff0c0;
+            font-size: 11px;
+            font-weight: 950;
+            line-height: 1;
+            box-shadow: 0 0 0 1px rgba(255, 234, 169, 0.42);
+        }
+
+        .battle-item-slot.gesture-ready {
+            border-color: #83f3a4;
+            box-shadow: 0 0 0 3px rgba(101, 220, 125, 0.24);
         }
 
         .battle-item-slot.empty {
@@ -1176,6 +1200,9 @@
         let onlineServedCount = 0;
         let onlineResultSubmitted = false;
         let lastOnlinePublish = 0;
+        let battleGestureSlot = null;
+        let battleGestureStartedAt = 0;
+        let battleGestureCooldownUntil = 0;
         let firebaseApp = null;
         let firebaseAuth = null;
         let firebaseDb = null;
@@ -1284,6 +1311,8 @@
         let dwellProgress = 0;
         let dwellCooldown = 0;
         const DWELL_COOLDOWN_TIME = 1000;
+        const BATTLE_GESTURE_HOLD_TIME = 750;
+        const BATTLE_GESTURE_COOLDOWN_TIME = 1200;
         let activeHandPositions = [];
         let uiHoverTarget = null;
         let uiHoverStartTime = 0;
@@ -1596,6 +1625,30 @@
             return curledCount >= 3;
         }
 
+        function isFingerExtended(landmarks, tip, pip, mcp) {
+            const tipPoint = landmarks[tip];
+            const pipPoint = landmarks[pip];
+            const mcpPoint = landmarks[mcp];
+            const verticalReach = pipPoint.y - tipPoint.y;
+            const palmReach = mcpPoint.y - pipPoint.y;
+            return verticalReach > 0.035 && tipPoint.y < mcpPoint.y && verticalReach > palmReach * 0.35;
+        }
+
+        function isFingerCurled(landmarks, tip, pip, mcp) {
+            return !isFingerExtended(landmarks, tip, pip, mcp);
+        }
+
+        function detectBattleGestureSlot(landmarks) {
+            const indexUp = isFingerExtended(landmarks, 8, 6, 5);
+            const middleUp = isFingerExtended(landmarks, 12, 10, 9);
+            const ringDown = isFingerCurled(landmarks, 16, 14, 13);
+            const pinkyDown = isFingerCurled(landmarks, 20, 18, 17);
+
+            if (indexUp && !middleUp && ringDown && pinkyDown) return 0;
+            if (indexUp && middleUp && ringDown && pinkyDown) return 1;
+            return null;
+        }
+
         let faceLandmarker, handLandmarker;
         let lastVideoTime = -1;
         let faceResult = null, handResult = null;
@@ -1758,6 +1811,9 @@
             pendingDirtyTable = false;
             onlineServedCount = 0;
             onlineResultSubmitted = false;
+            battleGestureSlot = null;
+            battleGestureStartedAt = 0;
+            battleGestureCooldownUntil = 0;
             processedOnlineEvents = new Set();
             updateBattleHud();
         }
@@ -1900,6 +1956,8 @@
                 if (!slot) return;
                 const itemKey = battleItems[index];
                 slot.classList.toggle('empty', !itemKey);
+                slot.classList.toggle('gesture-ready', battleGestureSlot === index && !!itemKey);
+                slot.dataset.gesture = index === 0 ? '1' : '2';
                 slot.innerHTML = itemKey ? `<img src="${BATTLE_ITEMS[itemKey].icon}" alt="${BATTLE_ITEMS[itemKey].name}">` : '';
                 slot.title = itemKey ? BATTLE_ITEMS[itemKey].name : '空道具槽';
             });
@@ -1932,6 +1990,8 @@
             const itemKey = battleItems[index];
             if (!onlineMode || !itemKey || !onlineOpponentId || !firebaseDb || !onlineMatchId) return;
             battleItems.splice(index, 1);
+            battleGestureSlot = null;
+            battleGestureStartedAt = 0;
             updateBattleHud();
             publishOnlineState(true);
             await push(ref(firebaseDb, `matches/${onlineMatchId}/events`), {
@@ -1941,6 +2001,53 @@
                 createdAt: serverTimestamp()
             });
             showTip(`使用道具：${BATTLE_ITEMS[itemKey].name}`);
+        }
+
+        function resetBattleGestureState() {
+            battleGestureSlot = null;
+            battleGestureStartedAt = 0;
+            battleItemSlots.forEach(slot => slot?.classList.remove('gesture-ready'));
+        }
+
+        function checkBattleItemGestures() {
+            if (macroState !== 'ONLINE_GAMEPLAY' || !onlineMode || Date.now() < battleGestureCooldownUntil) {
+                resetBattleGestureState();
+                return;
+            }
+            if (!handResult?.landmarks?.length || !battleItems.length || dragItems.left || dragItems.right) {
+                resetBattleGestureState();
+                return;
+            }
+
+            let detectedSlot = null;
+            for (const landmarks of handResult.landmarks) {
+                const slot = detectBattleGestureSlot(landmarks);
+                if (slot !== null && battleItems[slot]) {
+                    detectedSlot = slot;
+                    break;
+                }
+            }
+
+            if (detectedSlot === null) {
+                resetBattleGestureState();
+                return;
+            }
+
+            if (battleGestureSlot !== detectedSlot) {
+                battleGestureSlot = detectedSlot;
+                battleGestureStartedAt = Date.now();
+                updateBattleHud();
+                return;
+            }
+
+            if (Date.now() - battleGestureStartedAt >= BATTLE_GESTURE_HOLD_TIME) {
+                const itemName = BATTLE_ITEMS[battleItems[detectedSlot]]?.name || 'item';
+                showTip(`Gesture ${detectedSlot + 1}: ${itemName}`);
+                useBattleItem(detectedSlot);
+                battleGestureCooldownUntil = Date.now() + BATTLE_GESTURE_COOLDOWN_TIME;
+                resetBattleGestureState();
+                updateBattleHud();
+            }
         }
 
         function applyBattleItemEffect(type) {
@@ -2326,6 +2433,9 @@
                 activeDebuffs = {};
                 pendingDirtyTable = false;
                 lastOnlinePublish = 0;
+                battleGestureSlot = null;
+                battleGestureStartedAt = 0;
+                battleGestureCooldownUntil = 0;
                 updateBattleHud();
             }
 
@@ -3006,6 +3116,7 @@
                 lastHandPositions.right = null;
                 checkDwellNavigation();
                 checkUiDwellActions();
+                checkBattleItemGestures();
                 return;
             }
 
@@ -3124,6 +3235,7 @@
             });
 
             checkUiDwellActions();
+            checkBattleItemGestures();
         }
 
         function handleCookingLogic() {
