@@ -1133,7 +1133,6 @@
         import {
             FaceLandmarker,
             GestureRecognizer,
-            HandLandmarker,
             FilesetResolver
         } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
@@ -1638,7 +1637,7 @@
             return null;
         }
 
-        let faceLandmarker, handLandmarker, gestureRecognizer;
+        let faceLandmarker, gestureRecognizer;
         let lastVideoTime = -1;
         let faceResult = null, handResult = null;
         let gestureResult = null;
@@ -1658,15 +1657,6 @@
                 outputFaceBlendshapes: true,
                 runningMode: "VIDEO",
                 numFaces: 1
-            });
-
-            handLandmarker = await HandLandmarker.createFromOptions(vision, {
-                baseOptions: {
-                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-                    delegate: "GPU"
-                },
-                runningMode: "VIDEO",
-                numHands: 2
             });
 
             gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
@@ -2832,8 +2822,11 @@
             if (video.currentTime !== lastVideoTime) {
                 lastVideoTime = video.currentTime;
                 faceResult = faceLandmarker.detectForVideo(video, timestamp);
-                handResult = handLandmarker.detectForVideo(video, timestamp);
                 gestureResult = gestureRecognizer.recognizeForVideo(video, timestamp);
+                if (gestureResult && !gestureResult.handednesses && gestureResult.handedness) {
+                    gestureResult.handednesses = gestureResult.handedness;
+                }
+                handResult = gestureResult;
             }
 
             Engine.update(engine, Math.min(1000 / 20, elapsedMs));
