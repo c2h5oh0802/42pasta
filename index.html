@@ -1132,6 +1132,7 @@
 
         import {
             FaceLandmarker,
+            GestureRecognizer,
             HandLandmarker,
             FilesetResolver
         } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
@@ -1625,49 +1626,21 @@
             return curledCount >= 3;
         }
 
-        function isFingerExtended(landmarks, tip, pip, mcp) {
-            const wrist = landmarks[0];
-            const palm = landmarks[9];
-            const tipPoint = landmarks[tip];
-            const pipPoint = landmarks[pip];
-            const mcpPoint = landmarks[mcp];
-            const tipFromWrist = distance2D(tipPoint, wrist);
-            const pipFromWrist = distance2D(pipPoint, wrist);
-            const tipFromPalm = distance2D(tipPoint, palm);
-            const pipFromPalm = distance2D(pipPoint, palm);
-            const mcpFromPalm = distance2D(mcpPoint, palm);
-            return tipFromWrist > pipFromWrist * 1.08 &&
-                tipFromPalm > pipFromPalm * 1.12 &&
-                tipFromPalm > mcpFromPalm * 1.1;
-        }
-
-        function isFingerCurled(landmarks, tip, pip, mcp) {
-            const palm = landmarks[9];
-            const tipPoint = landmarks[tip];
-            const pipPoint = landmarks[pip];
-            const mcpPoint = landmarks[mcp];
-            const tipFromPalm = distance2D(tipPoint, palm);
-            const pipFromPalm = distance2D(pipPoint, palm);
-            const mcpFromPalm = distance2D(mcpPoint, palm);
-            return tipFromPalm < pipFromPalm * 1.1 || tipFromPalm < mcpFromPalm * 1.05;
-        }
-
-        function detectBattleGestureSlot(landmarks) {
-            const indexUp = isFingerExtended(landmarks, 8, 6, 5);
-            const middleUp = isFingerExtended(landmarks, 12, 10, 9);
-            const ringUp = isFingerExtended(landmarks, 16, 14, 13);
-            const pinkyUp = isFingerExtended(landmarks, 20, 18, 17);
-            const ringDown = isFingerCurled(landmarks, 16, 14, 13) || !ringUp;
-            const pinkyDown = isFingerCurled(landmarks, 20, 18, 17) || !pinkyUp;
-
-            if (indexUp && !middleUp && ringDown && pinkyDown) return 0;
-            if (indexUp && middleUp && ringDown && pinkyDown) return 1;
+        function detectBattleGestureSlot() {
+            const gestures = gestureResult?.gestures || [];
+            for (const handGestures of gestures) {
+                const best = handGestures?.[0];
+                if (!best || best.score < 0.5) continue;
+                if (best.categoryName === 'Pointing_Up') return 0;
+                if (best.categoryName === 'Victory') return 1;
+            }
             return null;
         }
 
-        let faceLandmarker, handLandmarker;
+        let faceLandmarker, handLandmarker, gestureRecognizer;
         let lastVideoTime = -1;
         let faceResult = null, handResult = null;
+        let gestureResult = null;
         let lastFrameTime = 0;
         let frameScale = 1;
 
@@ -1689,6 +1662,15 @@
             handLandmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
                     modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                    delegate: "GPU"
+                },
+                runningMode: "VIDEO",
+                numHands: 2
+            });
+
+            gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
                     delegate: "GPU"
                 },
                 runningMode: "VIDEO",
@@ -2030,21 +2012,14 @@
                 resetBattleGestureState();
                 return;
             }
-            if (!handResult?.landmarks?.length || !battleItems.length || dragItems.left || dragItems.right) {
+            if (!gestureResult?.gestures?.length || !battleItems.length || dragItems.left || dragItems.right) {
                 resetBattleGestureState();
                 return;
             }
 
-            let detectedSlot = null;
-            for (const landmarks of handResult.landmarks) {
-                const slot = detectBattleGestureSlot(landmarks);
-                if (slot !== null && battleItems[slot]) {
-                    detectedSlot = slot;
-                    break;
-                }
-            }
+            const detectedSlot = detectBattleGestureSlot();
 
-            if (detectedSlot === null) {
+            if (detectedSlot === null || !battleItems[detectedSlot]) {
                 resetBattleGestureState();
                 return;
             }
@@ -2812,6 +2787,7 @@
                 lastVideoTime = video.currentTime;
                 faceResult = faceLandmarker.detectForVideo(video, timestamp);
                 handResult = handLandmarker.detectForVideo(video, timestamp);
+                gestureResult = gestureRecognizer.detectForVideo(video, timestamp);
             }
 
             Engine.update(engine, Math.min(1000 / 20, elapsedMs));
