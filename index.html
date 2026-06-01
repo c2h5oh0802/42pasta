@@ -1626,23 +1626,39 @@
         }
 
         function isFingerExtended(landmarks, tip, pip, mcp) {
+            const wrist = landmarks[0];
+            const palm = landmarks[9];
             const tipPoint = landmarks[tip];
             const pipPoint = landmarks[pip];
             const mcpPoint = landmarks[mcp];
-            const verticalReach = pipPoint.y - tipPoint.y;
-            const palmReach = mcpPoint.y - pipPoint.y;
-            return verticalReach > 0.035 && tipPoint.y < mcpPoint.y && verticalReach > palmReach * 0.35;
+            const tipFromWrist = distance2D(tipPoint, wrist);
+            const pipFromWrist = distance2D(pipPoint, wrist);
+            const tipFromPalm = distance2D(tipPoint, palm);
+            const pipFromPalm = distance2D(pipPoint, palm);
+            const mcpFromPalm = distance2D(mcpPoint, palm);
+            return tipFromWrist > pipFromWrist * 1.08 &&
+                tipFromPalm > pipFromPalm * 1.12 &&
+                tipFromPalm > mcpFromPalm * 1.1;
         }
 
         function isFingerCurled(landmarks, tip, pip, mcp) {
-            return !isFingerExtended(landmarks, tip, pip, mcp);
+            const palm = landmarks[9];
+            const tipPoint = landmarks[tip];
+            const pipPoint = landmarks[pip];
+            const mcpPoint = landmarks[mcp];
+            const tipFromPalm = distance2D(tipPoint, palm);
+            const pipFromPalm = distance2D(pipPoint, palm);
+            const mcpFromPalm = distance2D(mcpPoint, palm);
+            return tipFromPalm < pipFromPalm * 1.1 || tipFromPalm < mcpFromPalm * 1.05;
         }
 
         function detectBattleGestureSlot(landmarks) {
             const indexUp = isFingerExtended(landmarks, 8, 6, 5);
             const middleUp = isFingerExtended(landmarks, 12, 10, 9);
-            const ringDown = isFingerCurled(landmarks, 16, 14, 13);
-            const pinkyDown = isFingerCurled(landmarks, 20, 18, 17);
+            const ringUp = isFingerExtended(landmarks, 16, 14, 13);
+            const pinkyUp = isFingerExtended(landmarks, 20, 18, 17);
+            const ringDown = isFingerCurled(landmarks, 16, 14, 13) || !ringUp;
+            const pinkyDown = isFingerCurled(landmarks, 20, 18, 17) || !pinkyUp;
 
             if (indexUp && !middleUp && ringDown && pinkyDown) return 0;
             if (indexUp && middleUp && ringDown && pinkyDown) return 1;
