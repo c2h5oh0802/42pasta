@@ -1154,7 +1154,8 @@
             query,
             orderByChild,
             limitToFirst,
-            limitToLast
+            limitToLast,
+            runTransaction
         } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
         // --- ?����?嗆??�?��???---
@@ -1179,6 +1180,7 @@
             appId: "1:795343470431:web:d41990c4f610fc399300ea",
             measurementId: "G-YZ7SELL8NX"
         };
+        const LEADERBOARD_RESET_VERSION = 'result-fix-20260601';
         const ONLINE_RULES = { time: 120, matchIntroMs: 7000, countdownMs: 3000, itemEveryServes: 3, maxItems: 2 };
         const BATTLE_ITEMS = {
             RUSH_HOUR: { name: '尖峰時刻', icon: 'assets/img/items/shaker.png' },
@@ -1768,6 +1770,23 @@
                 });
             }
             onlinePlayerId = firebaseAuth.currentUser.uid;
+            await resetWrongLeaderboardOnce();
+        }
+
+        async function resetWrongLeaderboardOnce() {
+            if (!firebaseDb) return;
+            const resetRef = ref(firebaseDb, 'maintenance/leaderboardResetVersion');
+            const snapshot = await get(resetRef).catch(() => null);
+            if (snapshot?.val?.() === LEADERBOARD_RESET_VERSION) return;
+            try {
+                await Promise.all([
+                    remove(ref(firebaseDb, 'leaderboard')),
+                    remove(ref(firebaseDb, 'leaderboardStats'))
+                ]);
+                await set(resetRef, LEADERBOARD_RESET_VERSION);
+            } catch (err) {
+                console.error('Leaderboard reset failed', err);
+            }
         }
 
         function serverNowMs() {
@@ -2152,25 +2171,31 @@
             const won = finalScore > opponentFinal;
             const draw = finalScore === opponentFinal;
             const playerStatsRef = ref(firebaseDb, `leaderboardStats/${onlinePlayerId}`);
-            const snapshot = await get(playerStatsRef).catch(() => null);
-            const current = snapshot?.val?.() || {};
-            const matches = (current.matches || 0) + 1;
-            const wins = (current.wins || 0) + (won ? 1 : 0);
-            const losses = (current.losses || 0) + (!won && !draw ? 1 : 0);
-            const draws = (current.draws || 0) + (draw ? 1 : 0);
-            const totalScore = (current.totalScore || 0) + finalScore;
-            await set(playerStatsRef, {
-                nickname: playerNickname,
-                wins,
-                losses,
-                draws,
-                matches,
-                bestScore: Math.max(current.bestScore || 0, finalScore),
-                totalScore,
-                averageScore: Math.round(totalScore / matches),
-                lastScore: finalScore,
-                updatedAt: serverTimestamp()
-            }).catch(() => {});
+            const result = await runTransaction(playerStatsRef, current => {
+                current = current || {};
+                const matches = (current.matches || 0) + 1;
+                const wins = (current.wins || 0) + (won ? 1 : 0);
+                const losses = (current.losses || 0) + (!won && !draw ? 1 : 0);
+                const draws = (current.draws || 0) + (draw ? 1 : 0);
+                const totalScore = (current.totalScore || 0) + finalScore;
+                return {
+                    nickname: playerNickname,
+                    wins,
+                    losses,
+                    draws,
+                    matches,
+                    bestScore: Math.max(current.bestScore || 0, finalScore),
+                    totalScore,
+                    averageScore: Math.round(totalScore / matches),
+                    lastScore: finalScore,
+                    updatedAt: Date.now()
+                };
+            }).catch(err => {
+                console.error('Leaderboard submit failed', err);
+                showTip('排行榜寫入失敗');
+                return null;
+            });
+            if (!result?.committed) throw new Error('leaderboard submit failed');
         }
 
         function listenLeaderboard() {
