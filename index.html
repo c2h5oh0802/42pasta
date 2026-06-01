@@ -2833,7 +2833,7 @@
                 lastVideoTime = video.currentTime;
                 faceResult = faceLandmarker.detectForVideo(video, timestamp);
                 handResult = handLandmarker.detectForVideo(video, timestamp);
-                gestureResult = gestureRecognizer.detectForVideo(video, timestamp);
+                gestureResult = gestureRecognizer.recognizeForVideo(video, timestamp);
             }
 
             Engine.update(engine, Math.min(1000 / 20, elapsedMs));
