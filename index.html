@@ -1200,6 +1200,7 @@
         let pendingDirtyTable = false;
         let onlineServedCount = 0;
         let onlineResultSubmitted = false;
+        let leaderboardSubmittedForMatch = null;
         let lastOnlinePublish = 0;
         let battleGestureSlot = null;
         let battleGestureStartedAt = 0;
@@ -1809,6 +1810,7 @@
             pendingDirtyTable = false;
             onlineServedCount = 0;
             onlineResultSubmitted = false;
+            leaderboardSubmittedForMatch = null;
             battleGestureSlot = null;
             battleGestureStartedAt = 0;
             battleGestureCooldownUntil = 0;
@@ -1889,6 +1891,11 @@
             onlineMode = true;
             onlineMatchId = matchId;
             onlineResultSubmitted = false;
+            leaderboardSubmittedForMatch = null;
+            if (gameTimerInterval) {
+                clearInterval(gameTimerInterval);
+                gameTimerInterval = null;
+            }
             processedOnlineEvents = new Set();
             changeMacroState('MATCH_FOUND');
             const matchRef = ref(firebaseDb, `matches/${matchId}`);
@@ -1913,8 +1920,13 @@
                     }
                 } else if (onlineMatchData.status === 'playing' && macroState !== 'ONLINE_GAMEPLAY') {
                     changeMacroState('ONLINE_GAMEPLAY');
-                } else if (onlineMatchData.status === 'finished' && macroState !== 'ONLINE_RESULT') {
-                    changeMacroState('ONLINE_RESULT');
+                } else if (onlineMatchData.status === 'finished') {
+                    if (macroState !== 'ONLINE_RESULT') {
+                        changeMacroState('ONLINE_RESULT');
+                    } else {
+                        showOnlineResultScreen();
+                    }
+                    submitLeaderboardFromMatch().catch(() => {});
                 }
             });
             eventUnsub = onChildAdded(ref(firebaseDb, `matches/${matchId}/events`), snapshot => {
@@ -2090,6 +2102,10 @@
             if (!onlineMode || onlineResultSubmitted) return;
             onlineResultSubmitted = true;
             const finalScore = Math.max(0, score - negativeReviews * 15);
+            if (gameTimerInterval) {
+                clearInterval(gameTimerInterval);
+                gameTimerInterval = null;
+            }
             publishOnlineState(true);
             if (firebaseDb && onlineMatchId && onlinePlayerId) {
                 await update(ref(firebaseDb, `matches/${onlineMatchId}/players/${onlinePlayerId}`), {
@@ -2101,17 +2117,48 @@
                 const latest = await get(ref(firebaseDb, `matches/${onlineMatchId}/players`)).catch(() => null);
                 const players = latest?.val?.() || {};
                 const allFinished = Object.values(players).length >= 2 && Object.values(players).every(p => p.finished);
-                if (allFinished) {
-                    await update(ref(firebaseDb, `matches/${onlineMatchId}`), { status: 'finished' }).catch(() => {});
-                }
+                if (allFinished) await finalizeOnlineMatch(players);
             }
-            changeMacroState('ONLINE_RESULT');
-            await submitLeaderboard(finalScore);
         }
 
-        async function submitLeaderboard(finalScore) {
+        function getOnlinePlayersSnapshot(players = onlineMatchData?.players || {}) {
+            const myState = players[onlinePlayerId] || {};
+            const opponent = onlineOpponentId ? (players[onlineOpponentId] || {}) : {};
+            const myFinal = typeof myState.finalScore === 'number'
+                ? myState.finalScore
+                : Math.max(0, (myState.score ?? score) - (myState.negativeReviews ?? negativeReviews) * 15);
+            const opponentFinal = typeof opponent.finalScore === 'number'
+                ? opponent.finalScore
+                : Math.max(0, (opponent.score || 0) - (opponent.negativeReviews || 0) * 15);
+            return { myState, opponent, myFinal, opponentFinal };
+        }
+
+        async function finalizeOnlineMatch(players) {
+            if (!firebaseDb || !onlineMatchId) return;
+            const playerUpdates = {};
+            Object.entries(players || {}).forEach(([uid, player]) => {
+                const finalScore = typeof player.finalScore === 'number'
+                    ? player.finalScore
+                    : Math.max(0, (player.score || 0) - (player.negativeReviews || 0) * 15);
+                playerUpdates[`players/${uid}/finalScore`] = finalScore;
+            });
+            await update(ref(firebaseDb, `matches/${onlineMatchId}`), {
+                status: 'finished',
+                ...playerUpdates
+            }).catch(() => {});
+        }
+
+        async function submitLeaderboardFromMatch() {
+            if (!firebaseDb || !onlineMatchId || !onlinePlayerId || leaderboardSubmittedForMatch === onlineMatchId) return;
+            const latest = await get(ref(firebaseDb, `matches/${onlineMatchId}/players`)).catch(() => null);
+            const players = latest?.val?.() || onlineMatchData?.players || {};
+            const { myFinal, opponentFinal } = getOnlinePlayersSnapshot(players);
+            await submitLeaderboard(myFinal, opponentFinal);
+            leaderboardSubmittedForMatch = onlineMatchId;
+        }
+
+        async function submitLeaderboard(finalScore, opponentFinal) {
             if (!firebaseDb || !onlineMatchId || !onlinePlayerId) return;
-            const opponentFinal = opponentState?.finalScore || Math.max(0, (opponentState?.score || 0) - (opponentState?.negativeReviews || 0) * 15);
             const won = finalScore > opponentFinal;
             const draw = finalScore === opponentFinal;
             const playerStatsRef = ref(firebaseDb, `leaderboardStats/${onlinePlayerId}`);
@@ -2168,8 +2215,7 @@
         }
 
         function showOnlineResultScreen() {
-            const myFinal = Math.max(0, score - negativeReviews * 15);
-            const opponentFinal = opponentState?.finalScore || Math.max(0, (opponentState?.score || 0) - (opponentState?.negativeReviews || 0) * 15);
+            const { myFinal, opponentFinal } = getOnlinePlayersSnapshot();
             const resultTitle = document.getElementById('online-result-title');
             if (resultTitle) {
                 resultTitle.textContent = myFinal === opponentFinal ? '平手' : (myFinal > opponentFinal ? '勝利' : '失敗');
@@ -2306,7 +2352,7 @@
                 currentLevelIndex = 0;
                 statusHud.style.display = 'block';
                 plateDisplay.style.display = 'block';
-                startLevel(currentLevelIndex);
+                if (!onlineResultSubmitted) startLevel(currentLevelIndex);
                 updateBattleHud();
             } else if (newState === 'LEVEL_RESULT') {
                 showResultScreen();
