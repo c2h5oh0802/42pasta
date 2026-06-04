@@ -964,7 +964,7 @@
 
         #leaderboard-list li {
             display: grid;
-            grid-template-columns: 42px minmax(150px, 1fr) 58px 58px 58px 58px 86px 86px;
+            grid-template-columns: 42px minmax(130px, 1fr) 70px 50px 50px 50px 50px 76px 76px;
             gap: 8px;
             align-items: center;
             padding: 7px 10px;
@@ -1178,7 +1178,7 @@
         <div id="leaderboard-screen" class="panel-overlay hidden">
             <div class="online-card">
                 <h2>玩家排行榜</h2>
-                <div class="online-status">依勝場排序，顯示前 50 名</div>
+                <div class="online-status">依最新對戰分數排序，顯示前 50 名</div>
                 <div class="leaderboard-scroll">
                     <ol id="leaderboard-list"></ol>
                 </div>
@@ -1284,6 +1284,7 @@
         let matchUnsub = null;
         let eventUnsub = null;
         let leaderboardUnsub = null;
+        let leaderboardServerRefreshTimer = null;
         let processedOnlineEvents = new Set();
 
         // 摮��?蝟餌絞 (閮��?瘥��??��??�擃��??���賂�?隞?”?芾圾???芷???
@@ -1872,7 +1873,9 @@
             if (matchUnsub) matchUnsub();
             if (eventUnsub) eventUnsub();
             if (leaderboardUnsub) leaderboardUnsub();
+            if (leaderboardServerRefreshTimer) clearTimeout(leaderboardServerRefreshTimer);
             matchmakingUnsub = matchUnsub = eventUnsub = leaderboardUnsub = null;
+            leaderboardServerRefreshTimer = null;
         }
 
         async function leaveMatchmaking() {
@@ -2295,27 +2298,74 @@
             if (!result?.committed) throw new Error('leaderboard submit failed');
         }
 
-        function getSortedLeaderboardRows(snapshot) {
-            const rows = [];
-            snapshot?.forEach(childSnap => rows.push({ id: childSnap.key, ...childSnap.val() }));
+        function sortLeaderboardRows(rows) {
             return rows
-                .sort((a, b) => (b.wins || 0) - (a.wins || 0)
+                .sort((a, b) => (b.lastScore || 0) - (a.lastScore || 0)
+                    || (b.updatedAt || 0) - (a.updatedAt || 0)
+                    || (b.wins || 0) - (a.wins || 0)
                     || (b.bestScore || 0) - (a.bestScore || 0)
                     || (b.averageScore || 0) - (a.averageScore || 0))
                 .slice(0, 50);
         }
 
+        function getSortedLeaderboardRows(snapshot) {
+            const rows = [];
+            snapshot?.forEach(childSnap => rows.push({ id: childSnap.key, ...childSnap.val() }));
+            return sortLeaderboardRows(rows);
+        }
+
+        function getSortedLeaderboardRowsFromData(data) {
+            return sortLeaderboardRows(Object.entries(data || {}).map(([id, row]) => ({ id, ...row })));
+        }
+
+        async function fetchLeaderboardRowsFromServer() {
+            const user = firebaseAuth?.currentUser;
+            if (!user || !FIREBASE_CONFIG.databaseURL) return null;
+            const token = await user.getIdToken();
+            const url = `${FIREBASE_CONFIG.databaseURL}/leaderboardStats.json?auth=${encodeURIComponent(token)}&ts=${Date.now()}`;
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`leaderboard server read failed: ${response.status}`);
+            return getSortedLeaderboardRowsFromData(await response.json());
+        }
+
+        function scheduleLeaderboardServerRefresh(delay = 300) {
+            if (leaderboardServerRefreshTimer) clearTimeout(leaderboardServerRefreshTimer);
+            leaderboardServerRefreshTimer = setTimeout(async () => {
+                leaderboardServerRefreshTimer = null;
+                try {
+                    const rows = await fetchLeaderboardRowsFromServer();
+                    if (rows) renderLeaderboard(rows);
+                } catch (err) {
+                    console.error('Leaderboard server refresh failed', err);
+                }
+            }, delay);
+        }
+
         async function listenLeaderboard() {
             if (!firebaseDb) return;
             if (leaderboardUnsub) leaderboardUnsub();
+            if (leaderboardServerRefreshTimer) clearTimeout(leaderboardServerRefreshTimer);
+            leaderboardServerRefreshTimer = null;
             const statsRef = ref(firebaseDb, 'leaderboardStats');
-            const snapshot = await get(statsRef).catch(err => {
-                console.error('Leaderboard load failed', err);
-                return null;
-            });
-            if (snapshot) renderLeaderboard(getSortedLeaderboardRows(snapshot));
+            let serverRows = null;
+            try {
+                serverRows = await fetchLeaderboardRowsFromServer();
+                if (serverRows) renderLeaderboard(serverRows);
+            } catch (err) {
+                console.error('Leaderboard server load failed', err);
+                const snapshot = await get(statsRef).catch(loadErr => {
+                    console.error('Leaderboard load failed', loadErr);
+                    return null;
+                });
+                if (snapshot) renderLeaderboard(getSortedLeaderboardRows(snapshot));
+            }
             leaderboardUnsub = onValue(statsRef, snapshot => {
-                renderLeaderboard(getSortedLeaderboardRows(snapshot));
+                const rows = getSortedLeaderboardRows(snapshot);
+                if (rows.length > 1 || rows.length >= (serverRows?.length || 0)) {
+                    renderLeaderboard(rows);
+                } else {
+                    scheduleLeaderboardServerRefresh();
+                }
             });
         }
 
@@ -2330,10 +2380,10 @@
         function renderLeaderboard(rows) {
             const list = document.getElementById('leaderboard-list');
             if (!list) return;
-            const header = '<li class="leaderboard-header"><strong>#</strong><strong>玩家</strong><strong>勝</strong><strong>敗</strong><strong>和</strong><strong>場</strong><strong>最高</strong><strong>平均</strong></li>';
+            const header = '<li class="leaderboard-header"><strong>#</strong><strong>玩家</strong><strong>本局</strong><strong>勝</strong><strong>敗</strong><strong>和</strong><strong>場</strong><strong>最高</strong><strong>平均</strong></li>';
             const body = rows.map((row, index) => `
-                <li><span>${index + 1}</span><span>${row.nickname || '玩家'}</span><strong>${row.wins || 0}</strong><span>${row.losses || 0}</span><span>${row.draws || 0}</span><span>${row.matches || 0}</span><strong>$${row.bestScore || 0}</strong><strong>$${row.averageScore || 0}</strong></li>
-            `).join('') || '<li><span>-</span><span>尚無資料</span><strong>0</strong><span>0</span><span>0</span><span>0</span><strong>$0</strong><strong>$0</strong></li>';
+                <li><span>${index + 1}</span><span>${row.nickname || '玩家'}</span><strong>$${row.lastScore || 0}</strong><strong>${row.wins || 0}</strong><span>${row.losses || 0}</span><span>${row.draws || 0}</span><span>${row.matches || 0}</span><strong>$${row.bestScore || 0}</strong><strong>$${row.averageScore || 0}</strong></li>
+            `).join('') || '<li><span>-</span><span>尚無資料</span><strong>$0</strong><strong>0</strong><span>0</span><span>0</span><span>0</span><strong>$0</strong><strong>$0</strong></li>';
             list.innerHTML = header + body;
         }
 
@@ -2389,6 +2439,10 @@
             if (leaderboardUnsub) {
                 leaderboardUnsub();
                 leaderboardUnsub = null;
+            }
+            if (leaderboardServerRefreshTimer) {
+                clearTimeout(leaderboardServerRefreshTimer);
+                leaderboardServerRefreshTimer = null;
             }
             changeMacroState('ONLINE_NAME');
         });
