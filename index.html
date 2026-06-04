@@ -1271,6 +1271,7 @@
         let onlineServedCount = 0;
         let onlineResultSubmitted = false;
         let leaderboardSubmittedForMatch = null;
+        let leaderboardSubmitPromise = null;
         let lastOnlinePublish = 0;
         let battleGestureSlot = null;
         let battleGestureStartedAt = 0;
@@ -1893,6 +1894,7 @@
             onlineServedCount = 0;
             onlineResultSubmitted = false;
             leaderboardSubmittedForMatch = null;
+            leaderboardSubmitPromise = null;
             battleGestureSlot = null;
             battleGestureStartedAt = 0;
             battleGestureCooldownUntil = 0;
@@ -2203,9 +2205,11 @@
             }
         }
 
-        function getOnlinePlayersSnapshot(players = onlineMatchData?.players || {}) {
-            const myState = players[onlinePlayerId] || {};
-            const opponent = onlineOpponentId ? (players[onlineOpponentId] || {}) : {};
+        function getOnlinePlayersSnapshot(players = onlineMatchData?.players || {}, context = {}) {
+            const playerId = context.playerId || onlinePlayerId;
+            const opponentId = context.opponentId || onlineOpponentId || Object.keys(players || {}).find(id => id !== playerId);
+            const myState = players[playerId] || {};
+            const opponent = opponentId ? (players[opponentId] || {}) : {};
             const myFinal = typeof myState.finalScore === 'number'
                 ? myState.finalScore
                 : Math.max(0, (myState.score ?? score) - (myState.negativeReviews ?? negativeReviews) * 15);
@@ -2230,20 +2234,40 @@
             }).catch(() => {});
         }
 
-        async function submitLeaderboardFromMatch() {
-            if (!firebaseDb || !onlineMatchId || !onlinePlayerId || leaderboardSubmittedForMatch === onlineMatchId) return;
-            const latest = await get(ref(firebaseDb, `matches/${onlineMatchId}/players`)).catch(() => null);
-            const players = latest?.val?.() || onlineMatchData?.players || {};
-            const { myFinal, opponentFinal } = getOnlinePlayersSnapshot(players);
-            await submitLeaderboard(myFinal, opponentFinal);
-            leaderboardSubmittedForMatch = onlineMatchId;
+        async function submitLeaderboardFromMatch(context = {}) {
+            const matchId = context.matchId || onlineMatchId;
+            const playerId = context.playerId || onlinePlayerId;
+            const opponentId = context.opponentId || onlineOpponentId;
+            const nickname = context.nickname || playerNickname;
+            if (!firebaseDb || !matchId || !playerId) return;
+            if (leaderboardSubmittedForMatch === matchId && leaderboardSubmitPromise) return leaderboardSubmitPromise;
+            if (leaderboardSubmittedForMatch === matchId) return;
+
+            leaderboardSubmittedForMatch = matchId;
+            leaderboardSubmitPromise = (async () => {
+                const latest = await get(ref(firebaseDb, `matches/${matchId}/players`)).catch(() => null);
+                const players = latest?.val?.() || (matchId === onlineMatchId ? onlineMatchData?.players : {}) || {};
+                const { myFinal, opponentFinal } = getOnlinePlayersSnapshot(players, { playerId, opponentId });
+                await submitLeaderboard(myFinal, opponentFinal, { playerId, nickname });
+            })();
+
+            try {
+                await leaderboardSubmitPromise;
+            } catch (err) {
+                if (leaderboardSubmittedForMatch === matchId) leaderboardSubmittedForMatch = null;
+                throw err;
+            } finally {
+                if (leaderboardSubmittedForMatch === matchId) leaderboardSubmitPromise = null;
+            }
         }
 
-        async function submitLeaderboard(finalScore, opponentFinal) {
-            if (!firebaseDb || !onlineMatchId || !onlinePlayerId) return;
+        async function submitLeaderboard(finalScore, opponentFinal, context = {}) {
+            const playerId = context.playerId || onlinePlayerId;
+            const nickname = context.nickname || playerNickname;
+            if (!firebaseDb || !playerId) return;
             const won = finalScore > opponentFinal;
             const draw = finalScore === opponentFinal;
-            const playerStatsRef = ref(firebaseDb, `leaderboardStats/${onlinePlayerId}`);
+            const playerStatsRef = ref(firebaseDb, `leaderboardStats/${playerId}`);
             const result = await runTransaction(playerStatsRef, current => {
                 current = current || {};
                 const matches = (current.matches || 0) + 1;
@@ -2252,7 +2276,7 @@
                 const draws = (current.draws || 0) + (draw ? 1 : 0);
                 const totalScore = (current.totalScore || 0) + finalScore;
                 return {
-                    nickname: playerNickname,
+                    nickname,
                     wins,
                     losses,
                     draws,
@@ -2356,6 +2380,7 @@
         });
         document.getElementById('btn-online-leaderboard')?.addEventListener('click', async () => {
             await ensureFirebaseReady().catch(() => {});
+            await submitLeaderboardFromMatch().catch(() => {});
             cleanupOnlineListeners();
             resetOnlineRoundState();
             changeMacroState('LEADERBOARD');
