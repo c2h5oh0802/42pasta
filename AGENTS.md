@@ -12,6 +12,7 @@
 
 ## Git
 - After every completed code or project-file change, create a Git commit.
+- After every completed commit, push the current branch to the configured remote.
 - Commit only files changed for the current request; do not stage unrelated user work.
 - Use concise commit messages that describe the visible change.
 
