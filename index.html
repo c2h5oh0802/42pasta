@@ -1178,7 +1178,7 @@
         <div id="leaderboard-screen" class="panel-overlay hidden">
             <div class="online-card">
                 <h2>玩家排行榜</h2>
-                <div class="online-status">依最新對戰分數排序，顯示前 50 名</div>
+                <div class="online-status">依勝場排序，顯示前 50 名</div>
                 <div class="leaderboard-scroll">
                     <ol id="leaderboard-list"></ol>
                 </div>
@@ -2300,11 +2300,11 @@
 
         function sortLeaderboardRows(rows) {
             return rows
-                .sort((a, b) => (b.lastScore || 0) - (a.lastScore || 0)
-                    || (b.updatedAt || 0) - (a.updatedAt || 0)
-                    || (b.wins || 0) - (a.wins || 0)
+                .sort((a, b) => (b.wins || 0) - (a.wins || 0)
                     || (b.bestScore || 0) - (a.bestScore || 0)
-                    || (b.averageScore || 0) - (a.averageScore || 0))
+                    || (b.averageScore || 0) - (a.averageScore || 0)
+                    || (b.lastScore || 0) - (a.lastScore || 0)
+                    || (b.updatedAt || 0) - (a.updatedAt || 0))
                 .slice(0, 50);
         }
 
