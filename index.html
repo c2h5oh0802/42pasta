@@ -859,6 +859,31 @@
             margin-top: 9px;
         }
 
+        .battle-item-help {
+            display: grid;
+            gap: 3px;
+            margin-top: 7px;
+            color: #f6df9d;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1.25;
+        }
+
+        .battle-item-help div {
+            min-width: 0;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .battle-item-help strong {
+            margin-right: 4px;
+            color: #83f3a4;
+        }
+
+        .battle-item-help .empty {
+            color: rgba(246, 223, 157, 0.58);
+        }
+
         .battle-item-slot {
             width: clamp(46px, 6vw, 58px);
             height: clamp(44px, 5.6vw, 54px);
@@ -1075,6 +1100,7 @@
                     <button class="battle-item-slot empty" id="battle-item-0" type="button" aria-label="道具 1"></button>
                     <button class="battle-item-slot empty" id="battle-item-1" type="button" aria-label="道具 2"></button>
                 </div>
+                <div class="battle-item-help" id="battle-item-help"></div>
             </div>
         </div>
         <!-- 璅��??恍�� (TITLE) -->
@@ -1252,10 +1278,30 @@
         };
         const ONLINE_RULES = { time: 120, matchIntroMs: 7000, countdownMs: 3000, itemEveryServes: 3, maxItems: 2 };
         const BATTLE_ITEMS = {
-            RUSH_HOUR: { name: '尖峰時刻', icon: 'assets/img/items/shaker.png' },
-            DIRTY_TABLE: { name: '髒桌突襲', icon: 'assets/img/items/table-stain.png' },
-            CONFUSE_ORDER: { name: '訂單混亂', icon: 'assets/img/ui/order-ticket.png' },
-            STICKY_HANDS: { name: '黏手攻擊', icon: 'assets/img/items/tissue-ball.png' }
+            RUSH_HOUR: {
+                name: '尖峰時刻',
+                icon: 'assets/img/items/shaker.png',
+                effect: '對手客人10秒更快失去耐心',
+                targetEffect: '10秒內客人耐心消耗加快'
+            },
+            DIRTY_TABLE: {
+                name: '髒桌突襲',
+                icon: 'assets/img/items/table-stain.png',
+                effect: '弄髒對手一張空桌',
+                targetEffect: '一張空桌會被弄髒'
+            },
+            CONFUSE_ORDER: {
+                name: '訂單混亂',
+                icon: 'assets/img/ui/order-ticket.png',
+                effect: '對手訂單8秒變模糊',
+                targetEffect: '8秒內訂單文字變模糊'
+            },
+            STICKY_HANDS: {
+                name: '黏手攻擊',
+                icon: 'assets/img/items/tissue-ball.png',
+                effect: '對手洗盤攪拌8秒變慢',
+                targetEffect: '8秒內洗盤與攪拌變慢'
+            }
         };
         const BATTLE_ITEM_KEYS = Object.keys(BATTLE_ITEMS);
         let onlineMode = false;
@@ -1265,7 +1311,8 @@
         let onlineOpponentId = null;
         let onlineMatchData = null;
         let opponentState = {};
-        let battleItems = [];
+        let battleItems = createEmptyBattleItems();
+        let battleItemUseInFlight = false;
         let activeDebuffs = {};
         let pendingDirtyTable = false;
         let onlineServedCount = 0;
@@ -1437,6 +1484,7 @@
         const battleOpponentScoreEl = document.getElementById('battle-opponent-score');
         const battleTimeEl = document.getElementById('battle-time');
         const battleItemSlots = [document.getElementById('battle-item-0'), document.getElementById('battle-item-1')];
+        const battleItemHelp = document.getElementById('battle-item-help');
         const levelSelectScreen = document.getElementById('level-select-screen');
         const resultScreen = document.getElementById('result-screen');
         const levelGrid = document.getElementById('level-grid-container');
@@ -1714,7 +1762,7 @@
         function shouldRunBattleGestureRecognizer(now) {
             return macroState === 'ONLINE_GAMEPLAY' &&
                 onlineMode &&
-                battleItems.length > 0 &&
+                hasBattleItems() &&
                 !dragItems.left &&
                 !dragItems.right &&
                 now >= battleGestureCooldownUntil &&
@@ -1891,7 +1939,8 @@
             onlineOpponentId = null;
             onlineMatchData = null;
             opponentState = {};
-            battleItems = [];
+            battleItems = createEmptyBattleItems();
+            battleItemUseInFlight = false;
             activeDebuffs = {};
             pendingDirtyTable = false;
             onlineServedCount = 0;
@@ -1973,6 +2022,32 @@
             };
         }
 
+        function createEmptyBattleItems() {
+            return Array.from({ length: ONLINE_RULES.maxItems }, () => null);
+        }
+
+        function normalizeBattleItems() {
+            if (!Array.isArray(battleItems)) battleItems = createEmptyBattleItems();
+            if (battleItems.length < ONLINE_RULES.maxItems) {
+                battleItems = [...battleItems, ...createEmptyBattleItems()].slice(0, ONLINE_RULES.maxItems);
+            } else if (battleItems.length > ONLINE_RULES.maxItems) {
+                battleItems = battleItems.slice(0, ONLINE_RULES.maxItems);
+            }
+            return battleItems;
+        }
+
+        function getBattleItemCount() {
+            return normalizeBattleItems().filter(Boolean).length;
+        }
+
+        function hasBattleItems() {
+            return getBattleItemCount() > 0;
+        }
+
+        function getFirstEmptyBattleItemSlot() {
+            return normalizeBattleItems().findIndex(itemKey => !itemKey);
+        }
+
         async function enterOnlineMatch(matchId) {
             cleanupOnlineListeners();
             onlineMode = true;
@@ -2035,7 +2110,7 @@
                 finalScore: Math.max(0, score - negativeReviews * 15),
                 negativeReviews,
                 servedCount: onlineServedCount,
-                itemInventory: battleItems,
+                itemInventory: normalizeBattleItems().filter(Boolean),
                 ready: true,
                 finished: onlineResultSubmitted
             };
@@ -2049,15 +2124,25 @@
             if (battleMyScoreEl) battleMyScoreEl.textContent = score;
             if (battleOpponentScoreEl) battleOpponentScoreEl.textContent = opponentState?.score || 0;
             if (battleTimeEl) battleTimeEl.textContent = Math.max(0, gameTimer);
+            normalizeBattleItems();
             battleItemSlots.forEach((slot, index) => {
                 if (!slot) return;
                 const itemKey = battleItems[index];
+                const item = BATTLE_ITEMS[itemKey];
                 slot.classList.toggle('empty', !itemKey);
                 slot.classList.toggle('gesture-ready', battleGestureSlot === index && !!itemKey);
                 slot.dataset.gesture = index === 0 ? '1' : '2';
-                slot.innerHTML = itemKey ? `<img src="${BATTLE_ITEMS[itemKey].icon}" alt="${BATTLE_ITEMS[itemKey].name}">` : '';
-                slot.title = itemKey ? BATTLE_ITEMS[itemKey].name : '空道具槽';
+                slot.innerHTML = item ? `<img src="${item.icon}" alt="${item.name}">` : '';
+                slot.title = item ? `${item.name}：${item.effect}` : '空道具槽';
+                slot.setAttribute('aria-label', item ? `道具 ${index + 1}：${item.name}，${item.effect}` : `道具 ${index + 1}：空`);
             });
+            if (battleItemHelp) {
+                battleItemHelp.innerHTML = battleItemSlots.map((_, index) => {
+                    const itemKey = battleItems[index];
+                    const item = BATTLE_ITEMS[itemKey];
+                    return `<div class="${item ? '' : 'empty'}"><strong>${index + 1}</strong>${item ? `${item.name}：${item.effect}` : '空道具槽'}</div>`;
+                }).join('');
+            }
         }
 
         function updateMatchFoundScreen() {
@@ -2072,32 +2157,49 @@
         function grantBattleItemIfNeeded() {
             if (!onlineMode) return;
             onlineServedCount++;
-            if (onlineServedCount % ONLINE_RULES.itemEveryServes !== 0 || battleItems.length >= ONLINE_RULES.maxItems) {
+            const emptySlot = getFirstEmptyBattleItemSlot();
+            if (onlineServedCount % ONLINE_RULES.itemEveryServes !== 0 || emptySlot === -1 || getBattleItemCount() >= ONLINE_RULES.maxItems) {
                 publishOnlineState(true);
                 return;
             }
             const itemKey = BATTLE_ITEM_KEYS[Math.floor(Math.random() * BATTLE_ITEM_KEYS.length)];
-            battleItems.push(itemKey);
-            showTip(`獲得道具：${BATTLE_ITEMS[itemKey].name}`);
+            battleItems[emptySlot] = itemKey;
+            showTip(`獲得道具 ${emptySlot + 1}：${BATTLE_ITEMS[itemKey].name}｜${BATTLE_ITEMS[itemKey].effect}`);
             updateBattleHud();
             publishOnlineState(true);
         }
 
         async function useBattleItem(index) {
+            if (battleItemUseInFlight || Date.now() < battleGestureCooldownUntil) return;
+            normalizeBattleItems();
             const itemKey = battleItems[index];
             if (!onlineMode || !itemKey || !onlineOpponentId || !firebaseDb || !onlineMatchId) return;
-            battleItems.splice(index, 1);
+            battleItemUseInFlight = true;
+            battleItems[index] = null;
             battleGestureSlot = null;
             battleGestureStartedAt = 0;
+            battleGestureCooldownUntil = Date.now() + BATTLE_GESTURE_COOLDOWN_TIME;
             updateBattleHud();
             publishOnlineState(true);
-            await push(ref(firebaseDb, `matches/${onlineMatchId}/events`), {
-                from: onlinePlayerId,
-                to: onlineOpponentId,
-                type: itemKey,
-                createdAt: serverTimestamp()
-            });
-            showTip(`使用道具：${BATTLE_ITEMS[itemKey].name}`);
+            try {
+                await push(ref(firebaseDb, `matches/${onlineMatchId}/events`), {
+                    from: onlinePlayerId,
+                    to: onlineOpponentId,
+                    type: itemKey,
+                    createdAt: serverTimestamp()
+                });
+                const item = BATTLE_ITEMS[itemKey];
+                showTip(`使用道具 ${index + 1}：${item.name}｜${item.effect}`);
+            } catch (err) {
+                if (!battleItems[index]) battleItems[index] = itemKey;
+                battleGestureCooldownUntil = 0;
+                console.error('Battle item send failed', err);
+                showTip('道具送出失敗，請再試一次');
+            } finally {
+                battleItemUseInFlight = false;
+                updateBattleHud();
+                publishOnlineState(true);
+            }
         }
 
         function resetBattleGestureState() {
@@ -2111,7 +2213,7 @@
                 resetBattleGestureState();
                 return;
             }
-            if (!gestureResult?.gestures?.length || !battleItems.length || dragItems.left || dragItems.right) {
+            if (!gestureResult?.gestures?.length || !hasBattleItems() || dragItems.left || dragItems.right) {
                 resetBattleGestureState();
                 return;
             }
@@ -2132,9 +2234,8 @@
 
             if (Date.now() - battleGestureStartedAt >= BATTLE_GESTURE_HOLD_TIME) {
                 const itemName = BATTLE_ITEMS[battleItems[detectedSlot]]?.name || 'item';
-                showTip(`Gesture ${detectedSlot + 1}: ${itemName}`);
+                showTip(`手勢 ${detectedSlot + 1} 使用：${itemName}`);
                 useBattleItem(detectedSlot);
-                battleGestureCooldownUntil = Date.now() + BATTLE_GESTURE_COOLDOWN_TIME;
                 resetBattleGestureState();
                 updateBattleHud();
             }
@@ -2142,21 +2243,19 @@
 
         function applyBattleItemEffect(type) {
             const now = performance.now();
+            const item = BATTLE_ITEMS[type];
             if (type === 'RUSH_HOUR') {
                 activeDebuffs.rushHourUntil = now + 10000;
-                showTip('對手使用了尖峰時刻');
             } else if (type === 'DIRTY_TABLE') {
                 pendingDirtyTable = true;
                 applyPendingDirtyTable();
-                showTip('對手弄髒了一張桌子');
             } else if (type === 'CONFUSE_ORDER') {
                 activeDebuffs.confuseOrderUntil = now + 8000;
                 updateOrderUI();
-                showTip('訂單被干擾了');
             } else if (type === 'STICKY_HANDS') {
                 activeDebuffs.stickyHandsUntil = now + 8000;
-                showTip('雙手變黏了');
             }
+            if (item) showTip(`對手使用：${item.name}｜${item.targetEffect}`);
         }
 
         function applyPendingDirtyTable() {
@@ -2644,7 +2743,8 @@
             timeDisplay.innerText = gameTimer;
             if (onlineMode) {
                 onlineServedCount = 0;
-                battleItems = [];
+                battleItems = createEmptyBattleItems();
+                battleItemUseInFlight = false;
                 activeDebuffs = {};
                 pendingDirtyTable = false;
                 lastOnlinePublish = 0;
@@ -3014,7 +3114,7 @@
                 if (shouldRunBattleGestureRecognizer(timestamp)) {
                     lastGestureRecognizeAt = timestamp;
                     gestureResult = gestureRecognizer.recognizeForVideo(video, timestamp);
-                } else if (macroState !== 'ONLINE_GAMEPLAY' || !battleItems.length) {
+                } else if (macroState !== 'ONLINE_GAMEPLAY' || !hasBattleItems()) {
                     gestureResult = null;
                 }
             }
