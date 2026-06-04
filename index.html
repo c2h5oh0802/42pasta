@@ -1376,6 +1376,10 @@
         let pots = Array.from({ length: POT_COUNT }, () => ({ state: 'EMPTY', progress: 0 }));
         let tipText = "";
         let tipTimer = 0;
+        let tipMessages = [];
+        const TIP_DURATION_DEFAULT = 150;
+        const TIP_DURATION_SKILL = 300;
+        const TIP_MAX_VISIBLE = 3;
 
         // 憌脫?蝟餌絞 (蝚砌???
         let drinkState = 'IDLE'; // IDLE, SHAKING, READY
@@ -2164,7 +2168,7 @@
             }
             const itemKey = BATTLE_ITEM_KEYS[Math.floor(Math.random() * BATTLE_ITEM_KEYS.length)];
             battleItems[emptySlot] = itemKey;
-            showTip(`獲得道具 ${emptySlot + 1}：${BATTLE_ITEMS[itemKey].name}｜${BATTLE_ITEMS[itemKey].effect}`);
+            showTip(`獲得道具 ${emptySlot + 1}：${BATTLE_ITEMS[itemKey].name}｜${BATTLE_ITEMS[itemKey].effect}`, { type: 'skill' });
             updateBattleHud();
             publishOnlineState(true);
         }
@@ -2189,12 +2193,12 @@
                     createdAt: serverTimestamp()
                 });
                 const item = BATTLE_ITEMS[itemKey];
-                showTip(`使用道具 ${index + 1}：${item.name}｜${item.effect}`);
+                showTip(`使用道具 ${index + 1}：${item.name}｜${item.effect}`, { type: 'skill' });
             } catch (err) {
                 if (!battleItems[index]) battleItems[index] = itemKey;
                 battleGestureCooldownUntil = 0;
                 console.error('Battle item send failed', err);
-                showTip('道具送出失敗，請再試一次');
+                showTip('道具送出失敗，請再試一次', { type: 'skill' });
             } finally {
                 battleItemUseInFlight = false;
                 updateBattleHud();
@@ -2234,7 +2238,7 @@
 
             if (Date.now() - battleGestureStartedAt >= BATTLE_GESTURE_HOLD_TIME) {
                 const itemName = BATTLE_ITEMS[battleItems[detectedSlot]]?.name || 'item';
-                showTip(`手勢 ${detectedSlot + 1} 使用：${itemName}`);
+                showTip(`手勢 ${detectedSlot + 1} 使用：${itemName}`, { type: 'skill' });
                 useBattleItem(detectedSlot);
                 resetBattleGestureState();
                 updateBattleHud();
@@ -2255,7 +2259,7 @@
             } else if (type === 'STICKY_HANDS') {
                 activeDebuffs.stickyHandsUntil = now + 8000;
             }
-            if (item) showTip(`對手使用：${item.name}｜${item.targetEffect}`);
+            if (item) showTip(`對手使用：${item.name}｜${item.targetEffect}`, { type: 'skill' });
         }
 
         function applyPendingDirtyTable() {
@@ -3743,9 +3747,15 @@
             });
         }
 
-        function showTip(text) {
+        function showTip(text, options = {}) {
+            if (!text) return;
+            const duration = options.duration || (options.type === 'skill' ? TIP_DURATION_SKILL : TIP_DURATION_DEFAULT);
             tipText = text;
-            tipTimer = 120;
+            tipTimer = duration;
+            tipMessages = [
+                { text, timer: duration, type: options.type || 'default' },
+                ...tipMessages.filter(message => message.text !== text)
+            ].slice(0, TIP_MAX_VISIBLE);
         }
 
         function drawTipOverlay() {
@@ -3779,17 +3789,31 @@
                 ctx.shadowBlur = 0;
             }
 
-            if (tipTimer > 0) {
+            tipMessages = tipMessages
+                .map(message => ({ ...message, timer: Math.max(0, message.timer - frameScale) }))
+                .filter(message => message.timer > 0)
+                .slice(0, TIP_MAX_VISIBLE);
+
+            if (tipMessages.length) {
+                tipMessages.forEach((message, index) => {
+                    let fontSize = 24;
+                    ctx.font = `bold ${fontSize}px Arial`;
+                    while (fontSize > 18 && ctx.measureText(message.text).width > 760) {
+                        fontSize -= 1;
+                        ctx.font = `bold ${fontSize}px Arial`;
+                    }
+                    const width = Math.min(820, Math.max(430, ctx.measureText(message.text).width + 70));
+                    const x = GAME_WIDTH / 2 - width / 2;
+                    const y = 58 + index * 66;
+                    drawActionBanner(x, y, width, 58);
+                    ctx.fillStyle = message.type === 'skill' ? '#83f3a4' : '#f1c40f';
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                    ctx.fillText(message.text, GAME_WIDTH / 2, y + 30);
+                    ctx.shadowBlur = 0;
+                });
+            } else if (tipTimer > 0) {
                 tipTimer = Math.max(0, tipTimer - frameScale);
-                ctx.font = 'bold 24px Arial';
-                const width = Math.min(760, Math.max(360, ctx.measureText(tipText).width + 64));
-                const x = GAME_WIDTH / 2 - width / 2;
-                const y = 68;
-                drawActionBanner(x, y, width, 62);
-                ctx.fillStyle = '#f1c40f';
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-                ctx.fillText(tipText, GAME_WIDTH / 2, y + 32);
             }
             ctx.restore();
         }
